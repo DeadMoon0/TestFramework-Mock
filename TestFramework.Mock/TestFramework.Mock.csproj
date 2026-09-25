@@ -16,7 +16,7 @@
 		<RepositoryUrl>https://github.com/DeadMoon0/TestFramework-Mock.git</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<Copyright>Copyright (c) DeadMoon0 2026</Copyright>
-		<PackageReleaseNotes>First release. Declare test doubles as Mock-Packs, host the application's own service composition in-process with MockEnvironment, call into it with MockExt.Host, and bring what the doubles recorded into the run with Core's FindArtifact and a MockArtifactFinder.</PackageReleaseNotes>
+		<PackageReleaseNotes>First release, on TestFramework.Core 0.6.0. Declare test doubles as Mock-Packs, host the application's own service composition in-process with MockEnvironment, call into it with MockExt.Host, and bring what the doubles recorded into the run with Core's FindArtifact and a MockArtifactFinder.</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -37,7 +37,7 @@
 	<ItemGroup>
 		<PackageReference Include="Castle.Core" Version="5.2.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-		<PackageReference Include="TestFramework.Core" Version="0.5.0" />
+		<PackageReference Include="TestFramework.Core" Version="0.6.0" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,19 +1,22 @@
+using TestFramework.Core.Environment.Graph;
+
 namespace TestFramework.Mock;
 
 /// <summary>
-/// The resource kind strings this package defines. The mock host publishes no resource values —
-/// it has no coordinates and nothing connects to it — so the kind exists purely so a step can
-/// require it and the environment knows to start the host.
+/// The resource kind this package defines: one resource per service the mock host can hand a
+/// <c>Host</c> step, named by the service's full type name. It carries no values — nothing connects to an
+/// in-process service — so it exists to be required, which is what lets the engine check before the run
+/// starts that the service a step calls is registered at all.
 /// </summary>
 public static class MockResourceKinds
 {
     /// <summary>
-    /// The in-process host that composes the system under test with its packs applied.
+    /// A service registered in the composition a <see cref="MockEnvironment"/> hosts.
     /// </summary>
     public const string Host = "mock.host";
 
     /// <summary>
-    /// The one host's identifier; a run hosts one composition.
+    /// The kind itself, for declaring and requiring hosted services.
     /// </summary>
-    public const string HostIdentifier = "host";
+    public static readonly ResourceKind HostKind = ResourceKind.Named(Host).Build();
 }

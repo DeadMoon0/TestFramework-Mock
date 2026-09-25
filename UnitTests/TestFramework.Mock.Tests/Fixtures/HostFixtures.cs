@@ -191,6 +191,17 @@ public sealed class CancellableReportService
 }
 
 /// <summary>
+/// A service registered by its open generic definition, the way repositories often are.
+/// </summary>
+public sealed class Repository<T>
+{
+    public string Describe()
+    {
+        return $"repository of {typeof(T).Name}";
+    }
+}
+
+/// <summary>
 /// Counts how many scoped workers have been disposed - a singleton, so it outlives every scope.
 /// </summary>
 public sealed class DisposalLog

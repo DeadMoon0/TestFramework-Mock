@@ -22,8 +22,7 @@ it without re-running the test.
 | the run's environment starts | the mocked service is not an interface | `FrameworkConfigurationException` |
 | the run's environment starts | a second mock host in one run | `FrameworkStateException` |
 | after the double is built | a setup or builder kept past `Configure` is changed | `FrameworkStateException` |
-| a `Host` step runs | the run has no mock host | `FrameworkConfigurationException` |
-| a `Host` step runs | the service is not registered in the composition | `FrameworkConfigurationException` |
+| planning the run | a `Host` step's service is declared by nothing — no `SetEnv(MockEnvironment...)`, or not registered in the composition | `FrameworkConfigurationException` (from Core, listing what is registered) |
 | the system under test calls a double | no setup matches the call | `FrameworkConfigurationException` |
 | the system under test calls a double | more than one setup matches the call | `FrameworkConfigurationException` |
 | the system under test calls a double | the run has already finished | `FrameworkStateException` |
@@ -100,10 +99,11 @@ race them.
 type — `ValueTask<Boolean>`, for example. Return a `Task` so the step finishes when the call does; for a
 `ValueTask`, call `.AsTask()`.
 
-**No mock host** means the run was started without `SetupRun(...).SetEnv(MockEnvironment.For(...))`.
-
-**Not registered** means the composition handed to `MockEnvironment.For(...)` does not register the class
-the `Host` step asked for. Register the system under test itself, not only its dependencies.
+**`requires mock.host '...'`** is refused while the run is planned, before its first step. The environment
+declares every service its composition registers, so either the run was started without
+`SetupRun(...).SetEnv(MockEnvironment.For(...))`, or the composition does not register the class the `Host`
+step calls. The refusal lists what is registered; register the system under test itself, not only its
+dependencies.
 
 ## Artifact Mistakes
 

@@ -154,6 +154,9 @@ run's double in each of those places, so nothing reaches the real dependency whi
 - The environment seals when the first run uses it: including another pack after that is refused, so every
   run hosts the same declaration.
 - Every run gets its own host, doubles and call logs, so parallel runs never share state.
+- Every service the composition registers is declared as a `mock.host` resource named by its full type name
+  (an open generic registration by its definition's name), so a `Host` step for a service nothing registers —
+  or a run without the environment at all — is refused before its first step, naming what is registered.
 - The finished run records which pack stood where: `run.EffectiveSettings` holds kind `mock.host`, key =
   the service's full name — with `[key]` appended for each keyed registration it replaced — and value =
   the pack's type name.
@@ -251,10 +254,10 @@ message lists the setups that do exist; add one, or widen a matcher.
 **`'Method(...)' matches more than one setup`** — two setups overlap for this call. Narrow them so exactly
 one answers.
 
-**`'X' is not registered in the hosted services`** — `Host` asked for a service the composition handed to
-`MockEnvironment.For(...)` does not register.
-
-**`This run has no mock host`** — the run was started without `SetEnv(MockEnvironment...)`.
+**`Step '...' requires mock.host '...', and nothing in this run declares it`** — refused before the first
+step. Either the run was started without `SetEnv(MockEnvironment...)`, or the composition handed to
+`MockEnvironment.For(...)` does not register the class the `Host` step calls. The message lists every
+service that is registered; register the system under test itself, not only its dependencies.
 
 **`The hosted call yields ValueTask<...>`** — return a `Task` so `Host` can await it.
 

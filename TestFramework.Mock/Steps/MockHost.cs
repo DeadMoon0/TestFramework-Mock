@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 
 using TestFramework.Core.Environment;
+using TestFramework.Core.Environment.Graph;
 using TestFramework.Core.Exceptions;
 using TestFramework.Core.Steps;
 using TestFramework.Core.Steps.Options;
@@ -18,11 +19,32 @@ namespace TestFramework.Mock;
 internal static class MockHost
 {
     /// <summary>
-    /// Requires the mock host, so setting a step that needs it is what starts it.
+    /// The name a hosted service carries on the run's resource list: its full type name, and for an open
+    /// generic registration the definition's.
     /// </summary>
-    public static IReadOnlyCollection<EnvironmentRequirement> Requirements()
+    public static string ResourceName(Type serviceType)
     {
-        return [new EnvironmentRequirement(MockResourceKinds.Host, MockResourceKinds.HostIdentifier)];
+        return serviceType.FullName ?? serviceType.Name;
+    }
+
+    /// <summary>
+    /// Requires the service a <c>Host</c> step calls, with the run's resources in view: the service itself
+    /// when it is registered, else the open generic definition it is a closed type of. Whatever is required
+    /// is checked by the engine before the run starts, and reaching this environment is what starts the host.
+    /// </summary>
+    public static IReadOnlyCollection<EnvironmentRequirement> RequirementsFor<TService>(ResourceGraph? resources)
+    {
+        string exact = ResourceName(typeof(TService));
+        if (resources is not null
+            && !resources.TryGetNode(MockResourceKinds.Host, exact, out _)
+            && typeof(TService).IsConstructedGenericType
+            && resources.TryGetNode(MockResourceKinds.Host, ResourceName(typeof(TService).GetGenericTypeDefinition()), out ResourceNode? definition)
+            && definition is not null)
+        {
+            return [MockResourceKinds.HostKind.Requirement(definition.Identifier)];
+        }
+
+        return [MockResourceKinds.HostKind.Requirement(exact)];
     }
 
     /// <summary>

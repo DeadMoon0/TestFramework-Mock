@@ -77,19 +77,22 @@ that leaves the process.
 
 ## 6. Runtime View
 
-1. **Environment creation.** Core creates the mock host because a `Host` step requires `mock.host`. The
+1. **Planning.** `MockEnvironment` declares one `mock.host` resource per registered service, and each
+   `Host` step requires the one for its service, so Core refuses a service nothing registers before the
+   run starts. The requirement reaches this environment because it declared that resource.
+2. **Environment creation.** Core creates the mock host because a `Host` step's requirement reached it. The
    component runs the author's composition, creates a fresh instance of each pack, removes every registration of the
    replaced service, adds the double as a singleton, records `mock.host/<service> = <pack>` on the run's
    effective settings, builds the provider and places the host state in the run's state slot.
-2. **A hosted call.** A `Host` step opens a scope for the call, resolves the service from it and calls it
+3. **A hosted call.** A `Host` step opens a scope for the call, resolves the service from it and calls it
    with arguments bound from run variables — and, when the call asks for it, the step's cancellation
    token. A returned task is awaited, and the scope is disposed when the call ends. Calls the system under test makes into a double pass
    through the interceptor: recorded, matched against exactly one setup, answered; declared artifacts are
    recorded after the result.
-3. **Finding.** A `FindArtifact` step with a `MockArtifactFinder` asks the host for the identity. If a
+4. **Finding.** A `FindArtifact` step with a `MockArtifactFinder` asks the host for the identity. If a
    double recorded it, Core adds the artifact under the finding step's own context; `CaptureArtifactVersion`
    re-resolves the latest record into a new version.
-4. **Teardown.** The component disposes the provider first, so the system under test's own disposal —
+5. **Teardown.** The component disposes the provider first, so the system under test's own disposal —
    a flush, a timer it stops — still reaches its doubles; then it freezes every double, and from then on
    calls and publishes are refused by name. The finished run still exposes the frozen doubles for
    verification.

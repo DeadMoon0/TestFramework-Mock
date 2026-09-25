@@ -102,13 +102,44 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task WithoutTheEnvironment_TheTriggerRefusesByName()
+    public async Task WithoutTheEnvironment_TheRunIsRefusedBeforeItsFirstStep()
     {
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
+        // Damage before: the run started and the Host step failed inside it. Nothing declares the service a
+        // Host step calls unless a MockEnvironment does, and that is now checked before anything starts.
+        FrameworkConfigurationException refusal = await Assert.ThrowsAsync<FrameworkConfigurationException>(
+            () => _timeline.SetupRun(null, output).RunAsync());
+
+        Assert.Contains($"requires mock.host '{typeof(ReportService).FullName}'", refusal.Message);
+    }
+
+    [Fact]
+    public async Task AHostStepForAServiceNothingRegisters_IsRefusedBeforeItsFirstStep_NamingWhatIsRegistered()
+    {
+        // Damage before: the Host step failed at run time, after the host had been built.
+        MockEnvironment environment = MockEnvironment.For(services =>
         {
-            TimelineRun run = await _timeline.SetupRun(null, output).RunAsync();
-            run.EnsureRanToCompletion();
-        });
+            services.AddSingleton<IFileStore, UnreachableFileStore>();
+        }).Include<FileStorePack>();
+
+        FrameworkConfigurationException refusal = await Assert.ThrowsAsync<FrameworkConfigurationException>(
+            () => _timeline.SetupRun(null, output).SetEnv(environment).RunAsync());
+
+        Assert.Contains($"requires mock.host '{typeof(ReportService).FullName}'", refusal.Message);
+        Assert.Contains(refusal.AvailableOptions, option => option.Contains(typeof(IFileStore).FullName!, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AServiceRegisteredAsAnOpenGeneric_CanBeHosted()
+    {
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((Repository<string> repository) => repository.Describe())).Name("describe")
+            .Build();
+        MockEnvironment environment = MockEnvironment.For(services => services.AddSingleton(typeof(Repository<>)));
+
+        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+
+        run.EnsureRanToCompletion();
+        Assert.Equal("repository of String", run.MockResult<string>("describe"));
     }
 
     [Fact]

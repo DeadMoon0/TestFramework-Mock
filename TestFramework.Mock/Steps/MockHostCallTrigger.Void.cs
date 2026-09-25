@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 using TestFramework.Core.Environment;
+using TestFramework.Core.Environment.Graph;
 using TestFramework.Core.Steps;
 using TestFramework.Core.Steps.Options;
 using TestFramework.Core.Variables;
@@ -46,11 +47,21 @@ public sealed class MockHostCallTrigger<TService> : Step<EmptyStepResultContext>
     public override bool DoesReturn => false;
 
     /// <summary>
-    /// Requires the mock host, so setting this trigger on a timeline is what starts it.
+    /// Requires the hosted service this trigger calls.
     /// </summary>
     public IReadOnlyCollection<EnvironmentRequirement> GetEnvironmentRequirements(VariableStore variableStore)
     {
-        return MockHost.Requirements();
+        return MockHost.RequirementsFor<TService>(null);
+    }
+
+    /// <summary>
+    /// Requires the hosted service this trigger calls - or the open generic registration it is a closed type
+    /// of - so the engine refuses a service nothing registers before the run starts, and reaching the mock host
+    /// is what starts it.
+    /// </summary>
+    public IReadOnlyCollection<EnvironmentRequirement> GetEnvironmentRequirements(VariableStore variableStore, ResourceGraph resources)
+    {
+        return MockHost.RequirementsFor<TService>(resources);
     }
 
     /// <summary>
