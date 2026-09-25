@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using TestFramework.Mock;
 
 namespace TestFramework.Mock.Tests.Fixtures;
@@ -92,7 +94,7 @@ public sealed class FileStorePack : MockDefinition<IFileStore>
 {
     protected override void Configure(MockBuilder<IFileStore> mock)
     {
-        mock.Call(f => f.CreateFile(Arg.Any<string>()))
+        mock.Call(f => f.CreateFile(MockArg.Any<string>()))
             .Returns(true)
             .ProducesArtifact((string path) => new("createdFile", path));
     }
@@ -105,6 +107,62 @@ public sealed class OtherFileStorePack : MockDefinition<IFileStore>
 {
     protected override void Configure(MockBuilder<IFileStore> mock)
     {
-        mock.Call(f => f.CreateFile(Arg.Any<string>())).Returns(false);
+        mock.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(false);
+    }
+}
+
+/// <summary>
+/// A system under test that takes its dependency by key - the registration a plain replacement used
+/// to leave standing.
+/// </summary>
+public sealed class KeyedReportService([FromKeyedServices("archive")] IFileStore archive)
+{
+    public bool Archive(string name)
+    {
+        return archive.CreateFile(name);
+    }
+}
+
+/// <summary>
+/// A system under test that still talks to its dependency while it is being disposed, as anything
+/// that flushes on dispose does.
+/// </summary>
+public sealed class FlushingReportService(IFileStore files) : IDisposable
+{
+    public bool Save(string name)
+    {
+        return files.CreateFile(name);
+    }
+
+    public void Dispose()
+    {
+        files.CreateFile("flushed-on-dispose.txt");
+    }
+}
+
+/// <summary>
+/// A pack that keeps state in a field: it answers true only the first time its Configure runs. Shared
+/// between runs, the second run would be answered false.
+/// </summary>
+public sealed class CountingPack : MockDefinition<IFileStore>
+{
+    private int _configured;
+
+    protected override void Configure(MockBuilder<IFileStore> mock)
+    {
+        this._configured++;
+        bool firstConfigure = this._configured == 1;
+        mock.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(firstConfigure);
+    }
+}
+
+/// <summary>
+/// A pack for a second service, for refusals that need a pack other than the one already included.
+/// </summary>
+public sealed class AuditLogPack : MockDefinition<IAuditLog>
+{
+    protected override void Configure(MockBuilder<IAuditLog> mock)
+    {
+        mock.Call(a => a.Write(MockArg.Any<string>()));
     }
 }

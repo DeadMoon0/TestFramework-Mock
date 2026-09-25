@@ -17,6 +17,7 @@ public sealed class MockBuilder<TService>
     where TService : class
 {
     private readonly List<MockCallSetupBase> _setups = [];
+    private bool _built;
 
     internal MockBuilder()
     {
@@ -29,6 +30,7 @@ public sealed class MockBuilder<TService>
     /// </summary>
     public MockCallSetup<TService, TResult> Call<TResult>(Expression<Func<TService, TResult>> call)
     {
+        this.EnsureOpen();
         MockCallSetup<TService, TResult> setup = new(CallPatternParser.Parse(call));
         this._setups.Add(setup);
         return setup;
@@ -39,6 +41,7 @@ public sealed class MockBuilder<TService>
     /// </summary>
     public MockCallSetup<TService> Call(Expression<Action<TService>> call)
     {
+        this.EnsureOpen();
         MockCallSetup<TService> setup = new(CallPatternParser.Parse(call));
         this._setups.Add(setup);
         return setup;
@@ -46,6 +49,9 @@ public sealed class MockBuilder<TService>
 
     internal IReadOnlyList<MockCallSetupBase> BuildSetups()
     {
+        this.EnsureOpen();
+        this._built = true;
+
         foreach (MockCallSetupBase setup in this._setups)
         {
             if (setup.Pattern.Method.ReturnType != typeof(void) && !setup.HasResponse)
@@ -63,6 +69,21 @@ public sealed class MockBuilder<TService>
             }
         }
 
+        foreach (MockCallSetupBase setup in this._setups)
+        {
+            setup.Seal();
+        }
+
         return [.. this._setups];
+    }
+
+    private void EnsureOpen()
+    {
+        if (this._built)
+        {
+            throw new FrameworkStateException(
+                $"A setup for {typeof(TService).Name} was declared after its double was built; it would never answer a call.",
+                recoverySteps: ["Declare every setup inside Configure, and do not keep the builder beyond it."]);
+        }
     }
 }

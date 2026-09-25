@@ -73,9 +73,9 @@ public class MockFindTests(ITestOutputHelper output)
     public void TwoDoublesPublishingOneIdentity_AreRefusedNamingBoth()
     {
         MockInstance<IFileStore> files = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(true).ProducesArtifact((string path) => new("entry", path))).Create();
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true).ProducesArtifact((string path) => new("entry", path))).Create();
         MockInstance<IAuditLog> audit = new InlinePack<IAuditLog>(m =>
-            m.Call(a => a.Write(Arg.Any<string>())).ProducesArtifact((string line) => new("entry", line))).Create();
+            m.Call(a => a.Write(MockArg.Any<string>())).ProducesArtifact((string line) => new("entry", line))).Create();
         using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
         MockHostState host = new(provider, new Dictionary<Type, MockInstanceGeneric>
         {
@@ -96,7 +96,7 @@ public class MockFindTests(ITestOutputHelper output)
     public async Task TheReference_ReResolvesTheLatestPublish_SoTheVersionVerbWorksAgainstIt()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>()))
+            m.Call(f => f.CreateFile(MockArg.Any<string>()))
                 .Returns(true)
                 .ProducesArtifact((string path) => new("createdFile", path))).Create();
         await using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();

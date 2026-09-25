@@ -110,4 +110,84 @@ public class MockEnvironmentTests(ITestOutputHelper output)
             run.EnsureRanToCompletion();
         });
     }
+
+    [Fact]
+    public async Task KeyedRegistrations_AreReplacedToo_SoNoPathReachesTheRealDependency()
+    {
+        // Damage without it: the keyed registration survived, and a service asking for it by key was
+        // handed the real dependency while the test believed it ran against the double.
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((KeyedReportService service) => service.Archive("a.txt"))).Name("archive")
+            .Build();
+        MockEnvironment environment = MockEnvironment.For(services =>
+        {
+            services.AddKeyedSingleton<IFileStore, UnreachableFileStore>("archive");
+            services.AddSingleton<IFileStore, UnreachableFileStore>();
+            services.AddSingleton<KeyedReportService>();
+        }).Include<FileStorePack>();
+
+        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+
+        run.EnsureRanToCompletion();
+        Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.CreateFile("a.txt")));
+        Assert.True(run.EffectiveSettings.TryGet(MockResourceKinds.Host, $"{typeof(IFileStore).FullName}[archive]", out string? pack));
+        Assert.Equal(nameof(FileStorePack), pack);
+    }
+
+    [Fact]
+    public async Task EveryRun_GetsAFreshPack_SoAPacksFieldCannotCarryOneRunIntoTheNext()
+    {
+        // Damage without it: one pack object served every run, so CountingPack's field made the second
+        // run's double answer differently from the first.
+        MockEnvironment environment = MockEnvironment.For(services =>
+        {
+            services.AddSingleton<IFileStore, UnreachableFileStore>();
+            services.AddSingleton<ReportService>();
+        }).Include<CountingPack>();
+
+        TimelineRun first = await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun second = await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+
+        first.EnsureRanToCompletion();
+        second.EnsureRanToCompletion();
+        Assert.True(first.MockResult<bool>("save"));
+        Assert.True(second.MockResult<bool>("save"));
+    }
+
+    [Fact]
+    public async Task APackIncludedAfterARunUsedTheEnvironment_IsRefused_AndTheSamePackAgainIsNot()
+    {
+        // Damage without the seal: a later Include silently changed what the next runs hosted, and raced
+        // with runs already reading the pack list.
+        MockEnvironment environment = CreateEnvironment();
+        (await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync()).EnsureRanToCompletion();
+
+        Assert.Same(environment, environment.Include<FileStorePack>());
+        FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => environment.Include<AuditLogPack>());
+        Assert.Contains(nameof(AuditLogPack), refusal.Message);
+    }
+
+    [Fact]
+    public async Task WhatTheSystemUnderTestDoesWhileBeingDisposed_StillReachesTheDouble()
+    {
+        // Damage without the order: the double froze before the provider disposed the service, so the
+        // flush inside Dispose was refused - on a background thread, a refusal like that can end the
+        // test process.
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((FlushingReportService service) => service.Save("report.txt"))).Name("save")
+            .Build();
+        MockEnvironment environment = MockEnvironment.For(services =>
+        {
+            services.AddSingleton<IFileStore, UnreachableFileStore>();
+            services.AddSingleton<FlushingReportService>();
+        }).Include<FileStorePack>();
+
+        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+
+        run.EnsureRanToCompletion();
+        MockInstance<IFileStore> mock = run.Mock<IFileStore>();
+        Assert.Equal(1, mock.CountCalls(f => f.CreateFile("flushed-on-dispose.txt")));
+        Assert.All(mock.RecordedCalls, call => Assert.True(call.Matched));
+        Assert.Throws<FrameworkStateException>(() => mock.Object.CreateFile("after-the-run.txt"));
+    }
 }

@@ -24,7 +24,7 @@
 <best_practices>
     Declare one named MockDefinition class per replaced service and reuse it across tests.
     Hand MockEnvironment.For the same registration code production uses, instead of rebuilding the composition in the test.
-    Use Arg.Any<T>() for arguments the test does not care about and exact values for the ones it does; keep setups from overlapping.
+    Use MockArg.Any<T>() for arguments the test does not care about and exact values for the ones it does; keep setups from overlapping.
     Return Task or Task<T> from Host lambdas for async services; the step then finishes when the call does.
     Give every published identity a name that says what it is, and one identity per pack.
     Assert on calls with run.Mock<T>().CountCalls(...) and on returned values with run.MockResult<T>(label).
@@ -34,7 +34,7 @@
 <api_hints>
     Important APIs and shapes:
     - class XPack : MockDefinition<IService> { protected override void Configure(MockBuilder<IService> mock) { ... } }
-    - mock.Call(s => s.Method(Arg.Any<string>(), "exact")) for value-returning and void calls
+    - mock.Call(s => s.Method(MockArg.Any<string>(), "exact")) for value-returning and void calls
     - setup verbs: Returns(value), Returns((a, b) => ...), Throws(exception), Callback((a, b) => ...), Compute((a, b, artifacts) => ...), ProducesArtifact((a, b) => new(identity, payload))
     - artifacts.Publish(identity, payload) inside a Compute body
     - MockEnvironment.For(services => ...).Include<XPack>()
@@ -59,14 +59,17 @@
     - A later publish of an identity replaces the earlier one in the environment; a version in the run is a look the timeline took, not one per call.
     - A finder whose identity nothing has published yet finds nothing and logs a warning; two doubles publishing one identity are refused naming both.
     - Call refusals are thrown into the system under test; a system that swallows exceptions can hide them, but the call log still records the call with Matched = false.
-    - Teardown freezes every double, then disposes the provider; later calls and publishes are refused by name.
+    - Teardown disposes the provider first, then freezes every double; calls made during disposal still reach the doubles, later calls and publishes are refused by name.
+    - Setups seal when the double is built, the environment seals when the first run uses it, and every run gets a fresh pack object.
+    - MockArg.Any<T>() is type-checked and only valid as a whole argument; arrays and lists compare by content.
+    - Keyed registrations of a replaced service are replaced too.
 </runtime_behavior>
 
 <documentation_notes>
     Guidance the agent should preserve:
     - Mock is deliberately treated as an ordinary environment; do not suggest writing to the run's stores from inside a double, or adding a collection step of its own.
     - Interfaces and methods only; properties, events and classes cannot be mocked yet.
-    - Matchers are exact values and Arg.Any<T>(); there is no predicate matcher and no call sequences yet.
+    - Matchers are exact values and MockArg.Any<T>(); there is no predicate matcher and no call sequences yet.
     - Recorded arguments and payloads are held by reference; publish a copy when the system under test mutates the object afterwards.
 </documentation_notes>
 
@@ -115,7 +118,7 @@
     - MockDefinition<TService>: a Mock-Pack
     - MockBuilder<TService>: what Configure receives; Call(...) declares a setup
     - MockCallSetup<TService, TResult> / MockCallSetup<TService>: one setup's verbs
-    - Arg: argument matchers for Call expressions
+    - MockArg: argument matchers for Call expressions
     - MockArtifacts / MockArtifact: the publish channel in Compute, and what ProducesArtifact returns
     - MockEnvironment: the environment provider; For(...) and Include<TPack>()
     - MockExt: the timeline verbs; Host(...)

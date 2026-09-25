@@ -28,7 +28,7 @@ public sealed class MailSenderPack : MockDefinition<IMailSender>
 {
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
-        mock.Call(m => m.SendAsync(Arg.Any<string>(), Arg.Any<string>()))
+        mock.Call(m => m.SendAsync(MockArg.Any<string>(), MockArg.Any<string>()))
             .Returns(Task.FromResult(true))
             .ProducesArtifact((string to, string subject) => new("sentMail", $"{to}: {subject}"));
     }
@@ -59,7 +59,7 @@ TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();
 
 run.EnsureRanToCompletion();
 bool registered = run.MockResult<bool>("register");
-int sent = run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", Arg.Any<string>()));
+int sent = run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", MockArg.Any<string>()));
 object? mail = run.ArtifactStore.GetMockArtifact("sentMail").Last.Payload;   // "ada@example.com: Welcome"
 ```
 
@@ -83,15 +83,21 @@ frozen: their call logs are a snapshot, and a late call is refused by name.
 
 ## Writing A Mock-Pack
 
-A setup names one call on the service. Arguments are matched by value, or by `Arg.Any<T>()`:
+A setup names one call on the service. Arguments are matched by value, or by `MockArg.Any<T>()`:
 
 ```csharp
 mock.Call(f => f.ReadText("config.json")).Returns("{}");
-mock.Call(f => f.ReadText(Arg.Any<string>())).Throws(new FileNotFoundException());
+mock.Call(f => f.ReadText(MockArg.Any<string>())).Throws(new FileNotFoundException());
 ```
 
 The second setup here would overlap the first for `"config.json"` — and a call that more than one setup
 matches is refused naming them all. There is no precedence rule; narrow the matchers instead.
+
+- `MockArg.Any<T>()` matches any value of `T`, and nothing of another type: on an `object` parameter,
+  `MockArg.Any<string>()` does not answer an `int`. It stands only as a whole argument — inside a larger
+  expression such as `MockArg.Any<int>() + 1` it is refused, because it would be read once as a fixed value.
+- An exact value is evaluated once, when the pack is instantiated. Arrays and lists compare by their
+  elements in order; everything else compares with `Equals`.
 
 | Verb | Meaning |
 |---|---|
@@ -116,6 +122,10 @@ The rules a pack is held to:
   so a call that throws never publishes it. What a `Compute` body published by hand before throwing
   stands. `Throws` together with `ProducesArtifact` on one setup is refused as unreachable.
 - **Interfaces only.** The service must be an interface; class mocking is not supported.
+- **Declared once.** Every setup is sealed when the double is built. A setup object or builder kept past
+  `Configure` refuses further changes, so nothing can alter a double that is already answering calls.
+- **A fresh pack per run.** The environment creates a new pack object for every run, so a field on a pack
+  never carries one run's state into the next.
 
 ## Hosting The System Under Test
 
@@ -127,13 +137,19 @@ MockEnvironment environment = MockEnvironment.For(services => services.AddMyAppl
 
 `For` takes the same registrations production makes, handed over rather than rebuilt, so the test hosts
 what actually ships. For each included pack the environment removes every registration of the service —
-including those an `IEnumerable<TService>` would resolve — and adds the run's double as a singleton.
+the plain one, every keyed one, and so everything an `IEnumerable<TService>` would resolve — and puts the
+run's double in each of those places, so nothing reaches the real dependency whichever way it asks.
 
 - Including the same pack twice is allowed and has no effect. Two packs for the same service are refused
   naming both.
+- The environment seals when the first run uses it: including another pack after that is refused, so every
+  run hosts the same declaration.
 - Every run gets its own host, doubles and call logs, so parallel runs never share state.
 - The finished run records which pack stood where: `run.EffectiveSettings` holds kind `mock.host`, key =
-  the service's full name, value = the pack's type name.
+  the service's full name — with `[key]` appended for each keyed registration it replaced — and value =
+  the pack's type name.
+- At the end of the run the provider is disposed first and the doubles freeze after, so what the system
+  under test does while being disposed — a flush, stopping a timer — still reaches its doubles.
 - A run hosts one composition. Set the environment with `SetupRun(...).SetEnv(environment)`.
 
 ## Calling The System Under Test
@@ -198,7 +214,7 @@ services — give each its own identity.
 ```csharp
 MockInstance<IMailSender> mail = run.Mock<IMailSender>();
 
-int count = mail.CountCalls(m => m.SendAsync(Arg.Any<string>(), "Welcome"));
+int count = mail.CountCalls(m => m.SendAsync(MockArg.Any<string>(), "Welcome"));
 IReadOnlyList<RecordedCall> calls = mail.RecordedCalls;   // method, arguments, matched, sequence
 ```
 
@@ -230,7 +246,7 @@ The full list, with when each one fires, is in
 ## Current Limits
 
 - Interfaces only, and methods only — properties and events cannot be set up yet.
-- Matchers are exact values and `Arg.Any<T>()`; there is no predicate matcher and no call sequences.
+- Matchers are exact values and `MockArg.Any<T>()`; there is no predicate matcher and no call sequences.
 - `Host` does not hand the step's cancellation token to the call, and has no overload for a synchronous
   `void` method.
 - Recorded arguments and payloads are held by reference: an object the system under test changes after

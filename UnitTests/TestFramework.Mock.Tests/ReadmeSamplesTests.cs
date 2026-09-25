@@ -41,7 +41,7 @@ public sealed class MailSenderPack : MockDefinition<IMailSender>
 {
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
-        mock.Call(m => m.SendAsync(Arg.Any<string>(), Arg.Any<string>()))
+        mock.Call(m => m.SendAsync(MockArg.Any<string>(), MockArg.Any<string>()))
             .Returns(Task.FromResult(true))
             .ProducesArtifact((string to, string subject) => new("sentMail", $"{to}: {subject}"));
     }
@@ -68,7 +68,7 @@ public class ReadmeSamplesTests
 
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("register"));
-        Assert.Equal(1, run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", Arg.Any<string>())));
+        Assert.Equal(1, run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", MockArg.Any<string>())));
         Assert.Equal("ada@example.com: Welcome", run.ArtifactStore.GetMockArtifact("sentMail").Last.Payload);
     }
 
@@ -94,7 +94,7 @@ public class ReadmeSamplesTests
             .RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.Equal(1, run.Mock<IMailSender>().CountCalls(m => m.SendAsync("grace@example.com", Arg.Any<string>())));
+        Assert.Equal(1, run.Mock<IMailSender>().CountCalls(m => m.SendAsync("grace@example.com", MockArg.Any<string>())));
     }
 
     // Mirrors the "Taking A Later Look" sample in TestFramework.Mock/README.md.

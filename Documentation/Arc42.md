@@ -58,7 +58,7 @@ that leaves the process.
 - `MockDefinition<TService>` / `MockBuilder<TService>`: the authoring surface of a Mock-Pack
 - `MockCallSetup<TService, TResult>` / `MockCallSetup<TService>`: one setup's verbs; the per-argument-count
   overloads are generated from `MockCallSetup.Arities.tt`
-- `Arg`, `CallPattern`, `CallPatternParser`: read a `m => m.Method(...)` expression into a matcher per
+- `MockArg`, `CallPattern`, `CallPatternParser`: read a `m => m.Method(...)` expression into a matcher per
   argument, evaluating plain values once at declaration time
 - `MockInstance<TService>`: one run's live double — the Castle proxy, the call recorder and the artifact
   record; frozen with the run
@@ -78,7 +78,7 @@ that leaves the process.
 ## 6. Runtime View
 
 1. **Environment creation.** Core creates the mock host because a `Host` step requires `mock.host`. The
-   component runs the author's composition, instantiates each pack, removes every registration of the
+   component runs the author's composition, creates a fresh instance of each pack, removes every registration of the
    replaced service, adds the double as a singleton, records `mock.host/<service> = <pack>` on the run's
    effective settings, builds the provider and places the host state in the run's state slot.
 2. **A hosted call.** A `Host` step resolves the service from the host and calls it with arguments bound
@@ -88,8 +88,9 @@ that leaves the process.
 3. **Finding.** A `FindArtifact` step with a `MockArtifactFinder` asks the host for the identity. If a
    double recorded it, Core adds the artifact under the finding step's own context; `CaptureArtifactVersion`
    re-resolves the latest record into a new version.
-4. **Teardown.** The component freezes every double first — from then on calls and publishes are refused
-   by name — and then disposes the provider. The finished run still exposes the frozen doubles for
+4. **Teardown.** The component disposes the provider first, so the system under test's own disposal —
+   a flush, a timer it stops — still reaches its doubles; then it freezes every double, and from then on
+   calls and publishes are refused by name. The finished run still exposes the frozen doubles for
    verification.
 
 ## 7. Deployment View
@@ -101,6 +102,9 @@ executed inside the test host process. There is no service deployment unit.
 
 - **Freezing:** the call recorder and the artifact record freeze with the run, so a finished run is a
   snapshot; the freeze is internal, so no caller can freeze a running double.
+- **Sealed declarations:** a pack's setups seal when its double is built, the environment seals when the
+  first run uses it, and every run gets a fresh pack object, so nothing declared can change underneath a
+  run that is using it.
 - **Honest failures:** every refusal derives from the framework's exception types and carries recovery
   steps and, where there is a set to choose from, the available options.
 - **Early validation:** awaitable results `Host` would not await are refused when the timeline is built;
@@ -137,7 +141,7 @@ executed inside the test host process. There is no service deployment unit.
 ## 11. Risks and Technical Debt
 
 - Interfaces and methods only: properties, events and classes cannot be mocked yet
-- Matchers are exact values and `Arg.Any<T>()`; no predicate matcher, no call sequences
+- Matchers are exact values and `MockArg.Any<T>()`; no predicate matcher, no call sequences
 - `Host` does not pass the step's cancellation token to the call, and has no synchronous `void` overload
 - Recorded arguments and payloads are held by reference, so later mutation by the system under test
   changes the record

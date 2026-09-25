@@ -11,7 +11,7 @@ public class MatchingAndReturnsTests
     public void AnyMatcher_AnswersEveryValue()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(true)).Create();
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true)).Create();
 
         Assert.True(mock.Object.CreateFile("one"));
         Assert.True(mock.Object.CreateFile("two"));
@@ -34,7 +34,7 @@ public class MatchingAndReturnsTests
     public void Returns_Lambda_ReceivesTheCallArgument()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.ReadText(Arg.Any<string>())).Returns((string path) => path + "!")).Create();
+            m.Call(f => f.ReadText(MockArg.Any<string>())).Returns((string path) => path + "!")).Create();
 
         Assert.Equal("a.txt!", mock.Object.ReadText("a.txt"));
     }
@@ -43,7 +43,7 @@ public class MatchingAndReturnsTests
     public void Returns_Lambda_ReceivesBothArguments()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.Copy(Arg.Any<string>(), "target")).Returns((string from, string to) => from.Length + to.Length)).Create();
+            m.Call(f => f.Copy(MockArg.Any<string>(), "target")).Returns((string from, string to) => from.Length + to.Length)).Create();
 
         Assert.Equal(12, mock.Object.Copy("source", "target"));
     }
@@ -53,7 +53,7 @@ public class MatchingAndReturnsTests
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
         {
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(false);
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(false);
             m.Call(f => f.CreateFile("special.txt")).Returns(true);
         }).Create();
 
@@ -69,7 +69,7 @@ public class MatchingAndReturnsTests
     {
         InvalidOperationException stated = new("disk full");
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Throws(stated)).Create();
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Throws(stated)).Create();
 
         InvalidOperationException thrown = Assert.Throws<InvalidOperationException>(
             () => mock.Object.CreateFile("x"));
@@ -80,7 +80,7 @@ public class MatchingAndReturnsTests
     public void MistypedLambda_IsRefusedWhereItWasDeclared()
     {
         InlinePack<IFileStore> pack = new(m =>
-            m.Call(f => f.ReadText(Arg.Any<string>())).Returns((int wrong) => wrong.ToString()));
+            m.Call(f => f.ReadText(MockArg.Any<string>())).Returns((int wrong) => wrong.ToString()));
 
         FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => pack.Create());
         Assert.Contains("does not fit the method", refusal.Message);
@@ -90,7 +90,7 @@ public class MatchingAndReturnsTests
     public void ValueReturningSetupWithoutResult_IsRefusedAtInstanceCreation()
     {
         InlinePack<IFileStore> pack = new(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).ProducesArtifact((string path) => new(path, null)));
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).ProducesArtifact((string path) => new(path, null)));
 
         FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => pack.Create());
         Assert.Contains("states no result", refusal.Message);
@@ -100,7 +100,7 @@ public class MatchingAndReturnsTests
     public void ASecondResult_IsRefused()
     {
         InlinePack<IFileStore> pack = new(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(true).Throws(new InvalidOperationException()));
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true).Throws(new InvalidOperationException()));
 
         FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => pack.Create());
         Assert.Contains("already states its result", refusal.Message);

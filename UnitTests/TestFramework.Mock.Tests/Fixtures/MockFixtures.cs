@@ -21,6 +21,19 @@ public interface IFileStore
 }
 
 /// <summary>
+/// Parameter shapes the matchers have to get right: a parameter wider than the matcher's type, a
+/// collection, and a nullable value type.
+/// </summary>
+public interface IValueSink
+{
+    int Put(object? value);
+
+    int Bytes(byte[] data);
+
+    int Maybe(int? value);
+}
+
+/// <summary>
 /// A second dependency, so two doubles can publish under one identity.
 /// </summary>
 public interface IAuditLog

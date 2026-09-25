@@ -18,6 +18,7 @@ public abstract class MockCallSetupBase
 {
     private readonly List<Action<object?[], MockArtifacts>> _artifactProducers = [];
     private Func<object?[], MockArtifacts, object?>? _response;
+    private volatile bool _sealed;
 
     private protected MockCallSetupBase(CallPattern pattern)
     {
@@ -31,6 +32,16 @@ public abstract class MockCallSetupBase
     internal bool DeclaresUnreachableArtifacts => this.AlwaysThrows && this._artifactProducers.Count > 0;
 
     private bool AlwaysThrows { get; set; }
+
+    /// <summary>
+    /// Closes the declaration once the double is built. A setup object can outlive <c>Configure</c> -
+    /// a pack may keep the reference <c>mock.Call</c> returned - and changing it afterwards would
+    /// change a double that is already answering calls, racing the calls it is answering.
+    /// </summary>
+    internal void Seal()
+    {
+        this._sealed = true;
+    }
 
     internal object? Invoke(object?[] arguments, MockArtifacts artifacts)
     {
@@ -54,6 +65,8 @@ public abstract class MockCallSetupBase
 
     private protected void SetResponse(Func<object?[], MockArtifacts, object?> response)
     {
+        this.EnsureOpen();
+
         if (this._response is not null)
         {
             throw new FrameworkConfigurationException(
@@ -66,7 +79,19 @@ public abstract class MockCallSetupBase
 
     private protected void AddArtifactProducer(Action<object?[], MockArtifacts> producer)
     {
+        this.EnsureOpen();
+
         this._artifactProducers.Add(producer);
+    }
+
+    private void EnsureOpen()
+    {
+        if (this._sealed)
+        {
+            throw new FrameworkStateException(
+                $"'{this.Pattern.Describe()}' was changed after its double was built; a setup is declared once, in Configure.",
+                recoverySteps: ["State every Returns, Throws, Compute and ProducesArtifact inside Configure, and do not keep the setup object beyond it."]);
+        }
     }
 
     /// <summary>

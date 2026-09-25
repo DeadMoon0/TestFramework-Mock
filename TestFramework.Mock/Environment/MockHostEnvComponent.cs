@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using TestFramework.Core.Environment;
 using TestFramework.Core.Exceptions;
@@ -36,20 +36,18 @@ internal sealed class MockHostEnvComponent : EnvComponent
         this._owner.ComposeServices(services);
 
         Dictionary<Type, MockInstanceGeneric> instances = [];
-        foreach (MockDefinitionGeneric pack in this._owner.Packs)
+        foreach (MockDefinitionGeneric pack in this._owner.CreatePacksForRun())
         {
             MockInstanceGeneric instance = pack.CreateInstanceGeneric();
+            string service = instance.ServiceType.FullName ?? instance.ServiceType.Name;
 
-            // Remove every registration of the service before adding the double, so nothing —
-            // including an IEnumerable<TService> resolution — still reaches the real one.
-            services.RemoveAll(instance.ServiceType);
-            services.AddSingleton(instance.ServiceType, instance.ProxyObject);
+            foreach (object? key in ReplaceEveryRegistration(services, instance.ServiceType, instance.ProxyObject))
+            {
+                context.EffectiveSettings.Record(MockResourceKinds.Host, $"{service}[{key}]", pack.GetType().Name);
+            }
+
             instances[instance.ServiceType] = instance;
-
-            context.EffectiveSettings.Record(
-                MockResourceKinds.Host,
-                instance.ServiceType.FullName ?? instance.ServiceType.Name,
-                pack.GetType().Name);
+            context.EffectiveSettings.Record(MockResourceKinds.Host, service, pack.GetType().Name);
         }
 
         ServiceProvider provider = services.BuildServiceProvider();
@@ -74,9 +72,48 @@ internal sealed class MockHostEnvComponent : EnvComponent
             return;
         }
 
-        // Freeze first, dispose after: from here on the doubles refuse further calls by name,
-        // instead of a disposed provider answering with an ObjectDisposedException.
-        host.FreezeForRunEnd();
-        await host.DisposeProviderAsync();
+        // Dispose first, freeze after. Disposing is how the system under test stops its own
+        // background work - a timer, a flush on dispose - and while it does so the doubles still
+        // answer and record. Only what outlives disposal meets a frozen double, and a refusal thrown
+        // on a background thread nobody observes can take the whole test process down, so the window
+        // in which that can happen is kept as small as the system under test allows.
+        try
+        {
+            await host.DisposeProviderAsync();
+        }
+        finally
+        {
+            host.FreezeForRunEnd();
+        }
+    }
+
+    /// <summary>
+    /// Removes every registration of the service - the plain one, every keyed one, and so every
+    /// <c>IEnumerable&lt;TService&gt;</c> - and puts the double in each slot, so nothing still reaches
+    /// the real dependency, whichever way it asks.
+    /// </summary>
+    /// <returns>The keys the double now also stands under.</returns>
+    private static IReadOnlyList<object?> ReplaceEveryRegistration(IServiceCollection services, Type serviceType, object proxy)
+    {
+        List<object?> keys = [.. services
+            .Where(descriptor => descriptor.ServiceType == serviceType && descriptor.IsKeyedService)
+            .Select(static descriptor => descriptor.ServiceKey)
+            .Distinct()];
+
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (services[index].ServiceType == serviceType)
+            {
+                services.RemoveAt(index);
+            }
+        }
+
+        services.AddSingleton(serviceType, proxy);
+        foreach (object? key in keys)
+        {
+            services.AddKeyedSingleton(serviceType, key, proxy);
+        }
+
+        return keys;
     }
 }

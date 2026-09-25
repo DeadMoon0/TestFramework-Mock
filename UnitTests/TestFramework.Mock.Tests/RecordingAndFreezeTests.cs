@@ -12,7 +12,7 @@ public class RecordingAndFreezeTests
     public void EveryCallIsRecorded_InOrder_WithItsArguments()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(true)).Create();
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true)).Create();
 
         mock.Object.CreateFile("first.txt");
         mock.Object.CreateFile("second.txt");
@@ -40,22 +40,22 @@ public class RecordingAndFreezeTests
     public void CountCalls_CountsOnlyWhatThePatternMatches()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(true)).Create();
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true)).Create();
 
         mock.Object.CreateFile("a.txt");
         mock.Object.CreateFile("b.txt");
         mock.Object.CreateFile("a.txt");
 
-        Assert.Equal(3, mock.CountCalls(f => f.CreateFile(Arg.Any<string>())));
+        Assert.Equal(3, mock.CountCalls(f => f.CreateFile(MockArg.Any<string>())));
         Assert.Equal(2, mock.CountCalls(f => f.CreateFile("a.txt")));
-        Assert.Equal(0, mock.CountCalls(f => f.ReadText(Arg.Any<string>())));
+        Assert.Equal(0, mock.CountCalls(f => f.ReadText(MockArg.Any<string>())));
     }
 
     [Fact]
     public void AFrozenMock_RefusesFurtherCalls_AndKeepsItsLog()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.CreateFile(Arg.Any<string>())).Returns(true)).Create();
+            m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true)).Create();
         mock.Object.CreateFile("before.txt");
 
         mock.FreezeForRunEnd();

@@ -46,7 +46,7 @@ public class AritiesTests(ITestOutputHelper output)
     public void AThreeArgumentSetup_ReturnsAndPublishes_LikeTheLowArities()
     {
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
-            m.Call(f => f.Move(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()))
+            m.Call(f => f.Move(MockArg.Any<string>(), MockArg.Any<string>(), MockArg.Any<bool>()))
                 .Returns((string from, string to, bool overwrite) => overwrite ? 1 : 0)
                 .ProducesArtifact((string from, string to, bool overwrite) => new("movedFile", $"{from} -> {to}"))).Create();
 
@@ -61,7 +61,7 @@ public class AritiesTests(ITestOutputHelper output)
     public void AMistypedThreeArgumentLambda_IsStillRefusedWhereItWasDeclared()
     {
         InlinePack<IFileStore> pack = new(m =>
-            m.Call(f => f.Move(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()))
+            m.Call(f => f.Move(MockArg.Any<string>(), MockArg.Any<string>(), MockArg.Any<bool>()))
                 .Returns((string from, string to, int wrong) => wrong));
 
         FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => pack.Create());

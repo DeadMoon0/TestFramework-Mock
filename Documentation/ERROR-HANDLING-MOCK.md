@@ -12,13 +12,16 @@ it without re-running the test.
 |---|---|---|
 | building the timeline | `Host` call yields an awaitable it would not await (`ValueTask`, a task of a task) | `FrameworkConfigurationException` |
 | building the environment | a second pack for a service another pack already replaces | `FrameworkConfigurationException` |
+| building the environment | a pack included after a run has already used the environment | `FrameworkConfigurationException` |
 | the run's environment starts | a setup is not a single direct method call on the service | `FrameworkConfigurationException` |
+| the run's environment starts | `MockArg` used inside a larger argument expression | `FrameworkConfigurationException` |
 | the run's environment starts | a typed lambda does not fit the mocked method | `FrameworkConfigurationException` |
 | the run's environment starts | a setup states its result twice | `FrameworkConfigurationException` |
 | the run's environment starts | a value-returning setup states no result | `FrameworkConfigurationException` |
 | the run's environment starts | `Throws` and `ProducesArtifact` on one setup | `FrameworkConfigurationException` |
 | the run's environment starts | the mocked service is not an interface | `FrameworkConfigurationException` |
 | the run's environment starts | a second mock host in one run | `FrameworkStateException` |
+| after the double is built | a setup or builder kept past `Configure` is changed | `FrameworkStateException` |
 | a `Host` step runs | the run has no mock host | `FrameworkConfigurationException` |
 | a `Host` step runs | the service is not registered in the composition | `FrameworkConfigurationException` |
 | the system under test calls a double | no setup matches the call | `FrameworkConfigurationException` |
@@ -57,8 +60,9 @@ Available:
 **More than one setup matches.** Lists exactly the overlapping setups. There is no precedence rule to fall
 back on — narrow the matchers so one answers.
 
-**The run is finished.** Something kept calling a double after its run ended — usually background work the
-system under test started. Make stopping it a step of the timeline.
+**The run is finished.** Something kept calling a double after its run ended. The provider is disposed
+before the doubles freeze, so a system under test that stops its work when disposed never meets this; what
+does is background work that outlives disposal. Make stopping it a step of the timeline.
 
 ## Pack Mistakes
 
@@ -81,6 +85,13 @@ never invents a return value. State `Returns`, `Compute` or `Throws`.
 
 **`Throws` with `ProducesArtifact`** is refused as unreachable — the artifact only publishes when a call
 completes. A body that should publish and then fail states both by hand in `Compute`.
+
+**`MockArg` inside a larger argument.** `MockArg.Any<int>() + 1` would be evaluated once, to a fixed
+value, and silently match only that. Use `MockArg.Any<T>()` as a whole argument, or state the exact value.
+
+**A setup changed after its double was built.** A setup object or builder kept past `Configure` refuses
+further changes: the double is already answering calls, and a declaration changing underneath them would
+race them.
 
 ## Host Mistakes
 

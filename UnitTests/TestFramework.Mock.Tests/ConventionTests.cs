@@ -17,7 +17,7 @@ public class ConventionTests(ITestOutputHelper output)
     {
         // A step that inherits a concrete base class's Clone() runs as that base class and
         // silently loses whatever it added.
-        ConventionReport report = StepConventions.AssertEveryStepClonesItself(typeof(Arg).Assembly);
+        ConventionReport report = StepConventions.AssertEveryStepClonesItself(typeof(MockArg).Assembly);
 
         output.WriteLine(report.ToString());
         Assert.True(report.Checked > 0, "the check found no steps at all, so it proved nothing");
@@ -26,7 +26,7 @@ public class ConventionTests(ITestOutputHelper output)
     [Fact]
     public void FreezingCascadesThroughThisPackagesParts()
     {
-        ConventionReport report = StepConventions.AssertFreezingCascades(typeof(Arg).Assembly);
+        ConventionReport report = StepConventions.AssertFreezingCascades(typeof(MockArg).Assembly);
 
         output.WriteLine(report.ToString());
         foreach (string skipped in report.Skipped)
@@ -42,7 +42,7 @@ public class ConventionTests(ITestOutputHelper output)
         // stray using is invisible in a diff.
         Assert.DoesNotContain(
             "System.Text.Json",
-            typeof(Arg).Assembly.GetReferencedAssemblies().Select(static reference => reference.Name));
+            typeof(MockArg).Assembly.GetReferencedAssemblies().Select(static reference => reference.Name));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class ConventionTests(ITestOutputHelper output)
     {
         // Every package is a stranger to every other; the one legal grant is this package's own
         // suite, and the check derives that name rather than pattern-matching it.
-        ConventionReport report = StepConventions.AssertNoPackageSeesAnothersInternals(typeof(Arg).Assembly);
+        ConventionReport report = StepConventions.AssertNoPackageSeesAnothersInternals(typeof(MockArg).Assembly);
 
         output.WriteLine(report.ToString());
     }

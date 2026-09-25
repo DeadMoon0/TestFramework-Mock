@@ -6,6 +6,7 @@ using Castle.DynamicProxy;
 
 using TestFramework.Core.Exceptions;
 using TestFramework.Mock.Artifacts;
+using TestFramework.Mock.Matching;
 using TestFramework.Mock.Recording;
 
 namespace TestFramework.Mock.Interception;
@@ -57,12 +58,6 @@ internal sealed class MockInterceptor : IInterceptor
 
     private static string Describe(MethodInfo method, IReadOnlyList<object?> arguments)
     {
-        IEnumerable<string> rendered = arguments.Select(argument => argument switch
-        {
-            null => "null",
-            string text => $"\"{text}\"",
-            _ => argument.ToString() ?? argument.GetType().Name,
-        });
-        return $"{method.Name}({string.Join(", ", rendered)})";
+        return $"{method.Name}({string.Join(", ", arguments.Select(MockValueText.Describe))})";
     }
 }
