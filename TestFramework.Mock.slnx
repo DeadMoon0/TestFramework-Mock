@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/UnitTests/">
+    <Project Path="UnitTests/TestFramework.Mock.Tests/TestFramework.Mock.Tests.csproj" />
+  </Folder>
+  <Project Path="TestFramework.Mock/TestFramework.Mock.csproj" />
+</Solution>

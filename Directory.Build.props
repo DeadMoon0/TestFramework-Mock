@@ -1,0 +1,25 @@
+<Project>
+
+	<!--
+	  One place for the settings every project in this repository shares, the same compiler contract
+	  as every other repo in the family. Nothing below may be repeated per project, and never behind a
+	  '$(Configuration)|$(Platform)' condition - such a block silently drops the setting everywhere
+	  else.
+	-->
+	<PropertyGroup>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<!-- Packaging and source-debugging conventions. A .snupkg carries the SourceLink data that
+	     lets a consumer step into this code, and that the generated API documentation links from. -->
+	<PropertyGroup>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+	</PropertyGroup>
+
+</Project>

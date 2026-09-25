@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Title>TestFramework.Mock</Title>
+		<Authors>DeadMoon0</Authors>
+		<Product>TestFramework</Product>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>Test;UnitTest;IntegrationTest;Framework;Fluent;Timeline;Mock;Mocking;TestDouble;Stub;DependencyInjection;InProcess</PackageTags>
+		<PackageIcon>Icon.png</PackageIcon>
+		<Description>Test the system under test in-process from inside a TestFramework timeline, with its own dependencies replaced by declared test doubles. Mock-Packs declare a double once; MockEnvironment hosts the application's real service composition with the doubles standing in; MockExt.Host calls into it, awaiting async calls; and what the doubles record becomes findable run artifacts, verified from the frozen run.</Description>
+		<Version>0.1.0</Version>
+		<PackageProjectUrl>https://github.com/DeadMoon0/TestFramework-Mock</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/DeadMoon0/TestFramework-Mock.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<Copyright>Copyright (c) DeadMoon0 2026</Copyright>
+		<PackageReleaseNotes>First release. Declare test doubles as Mock-Packs, host the application's own service composition in-process with MockEnvironment, call into it with MockExt.Host, and bring what the doubles recorded into the run with Core's FindArtifact and a MockArtifactFinder.</PackageReleaseNotes>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- This package's own suite, and nobody else. -->
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>TestFramework.Mock.Tests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Committed template output: regenerate with `dotnet t4 <template>.tt` (local tool manifest). -->
+		<None Update="Setup\MockCallSetup.Arities.tt" Generator="TextTemplatingFileGenerator" LastGenOutput="MockCallSetup.Arities.g.cs" />
+		<Compile Update="Setup\MockCallSetup.Arities.g.cs" AutoGen="True" DesignTime="True" DependentUpon="MockCallSetup.Arities.tt" />
+		<None Update="Steps\MockExt.Arities.tt" Generator="TextTemplatingFileGenerator" LastGenOutput="MockExt.Arities.g.cs" />
+		<Compile Update="Steps\MockExt.Arities.g.cs" AutoGen="True" DesignTime="True" DependentUpon="MockExt.Arities.tt" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Castle.Core" Version="5.2.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+		<PackageReference Include="TestFramework.Core" Version="0.5.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\Modules\TestFramework-Common\Assets\Icon.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+</Project>
