@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.DependencyInjection;
 
 using TestFramework.Core.Environment;
 using TestFramework.Core.Exceptions;
 using TestFramework.Core.Steps;
 using TestFramework.Core.Steps.Options;
 using TestFramework.Core.Variables;
+using TestFramework.Mock.Matching;
 
 namespace TestFramework.Mock;
 
@@ -34,11 +37,11 @@ public sealed class MockHostCallTrigger<TService, TResult> : Step<MockCallResult
     // One class for every arity and for sync and async alike: the generated MockExt.Host overloads
     // carry the argument types and close over their typed variable references, and a synchronous
     // call arrives already completed. What the step itself needs is only "resolve the arguments
-    // against this run's variables, make the call, await it".
-    private readonly Func<VariableStore, TService, Task<TResult>> _call;
+    // against this run's variables, make the call with the step's cancellation, await it".
+    private readonly Func<VariableStore, TService, CancellationToken, Task<TResult>> _call;
     private readonly VariableReferenceGeneric[] _arguments;
 
-    internal MockHostCallTrigger(Func<VariableStore, TService, Task<TResult>> call, VariableReferenceGeneric[] arguments)
+    internal MockHostCallTrigger(Func<VariableStore, TService, CancellationToken, Task<TResult>> call, VariableReferenceGeneric[] arguments)
     {
         RefuseUnawaitedResult();
 
@@ -91,14 +94,16 @@ public sealed class MockHostCallTrigger<TService, TResult> : Step<MockCallResult
     }
 
     /// <summary>
-    /// Resolves the service from the hosted provider, calls it, and awaits the call.
+    /// Resolves the service from a scope opened for this call, calls it with the step's cancellation,
+    /// and awaits the call. The scope - and every scoped service in it - is disposed when the call ends.
     /// </summary>
     /// <param name="context">What this step is given.</param>
     /// <returns>The step's result.</returns>
     public override async Task<MockCallResult<TResult>?> Execute(RunContext context)
     {
-        TService service = MockHost.Resolve<TService>(context);
-        return new MockCallResult<TResult>(await this._call(context.Variables, service));
+        await using AsyncServiceScope scope = MockHost.StateOf(context).CreateCallScope();
+        TService service = MockHost.Resolve<TService>(scope.ServiceProvider);
+        return new MockCallResult<TResult>(await this._call(context.Variables, service, context.Deadline.Token));
     }
 
     /// <summary>
@@ -114,18 +119,7 @@ public sealed class MockHostCallTrigger<TService, TResult> : Step<MockCallResult
         }
 
         throw new FrameworkConfigurationException(
-            $"The hosted call yields {Describe(typeof(TResult))}, which Host would not await; the step would pass while the call is still running.",
+            $"The hosted call yields {MockValueText.DescribeType(typeof(TResult))}, which Host would not await; the step would pass while the call is still running.",
             recoverySteps: ["Return a Task or Task<T> from the call so Host awaits it — for a ValueTask, call .AsTask()."]);
-    }
-
-    private static string Describe(Type type)
-    {
-        if (!type.IsGenericType)
-        {
-            return type.Name;
-        }
-
-        string name = type.Name[..type.Name.IndexOf('`')];
-        return $"{name}<{string.Join(", ", type.GetGenericArguments().Select(Describe))}>";
     }
 }

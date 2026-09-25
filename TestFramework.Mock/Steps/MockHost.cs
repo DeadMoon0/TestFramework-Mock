@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -40,12 +41,12 @@ internal static class MockHost
     }
 
     /// <summary>
-    /// Resolves the system under test from the run's hosted services.
+    /// Resolves the system under test from one hosted call's scope.
     /// </summary>
-    public static TService Resolve<TService>(RunContext context)
+    public static TService Resolve<TService>(IServiceProvider callScope)
         where TService : class
     {
-        return StateOf(context).Provider.GetService<TService>()
+        return callScope.GetService<TService>()
             ?? throw new FrameworkConfigurationException(
                 $"'{typeof(TService).Name}' is not registered in the hosted services.",
                 recoverySteps: ["Register it in the composition handed to MockEnvironment.For(...)."]);

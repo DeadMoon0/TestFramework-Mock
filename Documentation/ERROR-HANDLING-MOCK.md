@@ -18,7 +18,7 @@ it without re-running the test.
 | the run's environment starts | a typed lambda does not fit the mocked method | `FrameworkConfigurationException` |
 | the run's environment starts | a setup states its result twice | `FrameworkConfigurationException` |
 | the run's environment starts | a value-returning setup states no result | `FrameworkConfigurationException` |
-| the run's environment starts | `Throws` and `ProducesArtifact` on one setup | `FrameworkConfigurationException` |
+| the run's environment starts | `Throws` or `ThrowsAsync` together with `ProducesArtifact` on one setup | `FrameworkConfigurationException` |
 | the run's environment starts | the mocked service is not an interface | `FrameworkConfigurationException` |
 | the run's environment starts | a second mock host in one run | `FrameworkStateException` |
 | after the double is built | a setup or builder kept past `Configure` is changed | `FrameworkStateException` |
@@ -29,6 +29,7 @@ it without re-running the test.
 | the system under test calls a double | the run has already finished | `FrameworkStateException` |
 | a find or a later look | two doubles published the same identity | `FrameworkConfigurationException` |
 | reading the finished run | `run.Mock<T>()` for a service no pack replaced | `FrameworkConfigurationException` |
+| reading the finished run | `run.MockResult<T>(label)` with a type the step did not return | `FrameworkConfigurationException` |
 
 Not an error: a `MockArtifactFinder` whose identity nothing has published yet. It finds nothing and logs a
 warning, like any empty finder.
@@ -83,8 +84,8 @@ Available:
 **A value-returning setup with no result** is refused rather than answered with `default`: a mocked call
 never invents a return value. State `Returns`, `Compute` or `Throws`.
 
-**`Throws` with `ProducesArtifact`** is refused as unreachable — the artifact only publishes when a call
-completes. A body that should publish and then fail states both by hand in `Compute`.
+**`Throws` or `ThrowsAsync` with `ProducesArtifact`** is refused as unreachable — the artifact only
+publishes when a call completes, and for an async call when its task finishes successfully. A body that should publish and then fail states both by hand in `Compute`.
 
 **`MockArg` inside a larger argument.** `MockArg.Any<int>() + 1` would be evaluated once, to a fixed
 value, and silently match only that. Use `MockArg.Any<T>()` as a whole argument, or state the exact value.

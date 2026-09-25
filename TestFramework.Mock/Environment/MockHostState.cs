@@ -26,7 +26,11 @@ public sealed class MockHostState
         this._instances = instances;
     }
 
-    internal IServiceProvider Provider => this._provider;
+    /// <summary>
+    /// A scope for one hosted call, the way production opens one per request: scoped services are
+    /// created fresh for it and disposed when it ends, singletons are shared across the run.
+    /// </summary>
+    internal AsyncServiceScope CreateCallScope() => this._provider.CreateAsyncScope();
 
     internal IEnumerable<MockInstanceGeneric> Instances => this._instances.Values;
 

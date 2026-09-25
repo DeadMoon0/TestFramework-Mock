@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,11 @@ public sealed class ReportService(IFileStore files)
     public bool Save(string name)
     {
         return files.CreateFile(name);
+    }
+
+    public void Remove(string name)
+    {
+        files.Delete(name);
     }
 }
 
@@ -97,6 +103,7 @@ public sealed class FileStorePack : MockDefinition<IFileStore>
         mock.Call(f => f.CreateFile(MockArg.Any<string>()))
             .Returns(true)
             .ProducesArtifact((string path) => new("createdFile", path));
+        mock.Call(f => f.Delete(MockArg.Any<string>()));
     }
 }
 
@@ -164,5 +171,49 @@ public sealed class AuditLogPack : MockDefinition<IAuditLog>
     protected override void Configure(MockBuilder<IAuditLog> mock)
     {
         mock.Call(a => a.Write(MockArg.Any<string>()));
+    }
+}
+
+/// <summary>
+/// A system under test whose calls take a cancellation token, as well-behaved async services do.
+/// </summary>
+public sealed class CancellableReportService
+{
+    public Task<bool> TokenCanBeCancelledAsync(CancellationToken cancellation)
+    {
+        return Task.FromResult(cancellation.CanBeCanceled);
+    }
+
+    public async Task WaitUntilCancelledAsync(CancellationToken cancellation)
+    {
+        await Task.Delay(Timeout.Infinite, cancellation);
+    }
+}
+
+/// <summary>
+/// Counts how many scoped workers have been disposed - a singleton, so it outlives every scope.
+/// </summary>
+public sealed class DisposalLog
+{
+    private int _disposed;
+
+    public int Disposed => Volatile.Read(ref this._disposed);
+
+    public void Record()
+    {
+        Interlocked.Increment(ref this._disposed);
+    }
+}
+
+/// <summary>
+/// A scoped service, the way most of an application's services are registered.
+/// </summary>
+public sealed class ScopedWorker(DisposalLog log) : IDisposable
+{
+    public Guid Id { get; } = Guid.NewGuid();
+
+    public void Dispose()
+    {
+        log.Record();
     }
 }

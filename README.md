@@ -40,7 +40,7 @@ public sealed class MailSenderPack : MockDefinition<IMailSender>
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
         mock.Call(m => m.SendAsync(MockArg.Any<string>(), MockArg.Any<string>()))
-            .Returns(Task.FromResult(true))
+            .ReturnsAsync(true)
             .ProducesArtifact((string to, string subject) => new("sentMail", $"{to}: {subject}"));
     }
 }

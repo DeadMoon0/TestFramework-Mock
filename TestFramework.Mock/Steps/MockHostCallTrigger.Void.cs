@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.DependencyInjection;
 
 using TestFramework.Core.Environment;
 using TestFramework.Core.Steps;
@@ -10,18 +13,18 @@ using TestFramework.Core.Variables;
 namespace TestFramework.Mock;
 
 /// <summary>
-/// Resolves one service from the run's mock host and awaits a call that yields no value — the void
-/// counterpart of <see cref="MockHostCallTrigger{TService, TResult}"/>. The step finishes when the
-/// call's task does, never when it was merely started.
+/// Resolves one service from the run's mock host and calls it for no value — the void counterpart of
+/// <see cref="MockHostCallTrigger{TService, TResult}"/>, for a synchronous void method and an awaited
+/// task alike. The step finishes when the call's task does, never when it was merely started.
 /// </summary>
 /// <typeparam name="TService">The hosted service to call — the system under test, not a double.</typeparam>
 public sealed class MockHostCallTrigger<TService> : Step<EmptyStepResultContext>, IHasEnvironmentRequirements
     where TService : class
 {
-    private readonly Func<VariableStore, TService, Task> _call;
+    private readonly Func<VariableStore, TService, CancellationToken, Task> _call;
     private readonly VariableReferenceGeneric[] _arguments;
 
-    internal MockHostCallTrigger(Func<VariableStore, TService, Task> call, VariableReferenceGeneric[] arguments)
+    internal MockHostCallTrigger(Func<VariableStore, TService, CancellationToken, Task> call, VariableReferenceGeneric[] arguments)
     {
         this._call = call ?? throw new ArgumentNullException(nameof(call));
         this._arguments = arguments;
@@ -72,14 +75,16 @@ public sealed class MockHostCallTrigger<TService> : Step<EmptyStepResultContext>
     }
 
     /// <summary>
-    /// Resolves the service from the hosted provider, calls it, and awaits the call.
+    /// Resolves the service from a scope opened for this call, calls it with the step's cancellation,
+    /// and awaits the call. The scope is disposed when the call ends.
     /// </summary>
     /// <param name="context">What this step is given.</param>
     /// <returns>The step's result.</returns>
     public override async Task<EmptyStepResultContext?> Execute(RunContext context)
     {
-        TService service = MockHost.Resolve<TService>(context);
-        await this._call(context.Variables, service);
+        await using AsyncServiceScope scope = MockHost.StateOf(context).CreateCallScope();
+        TService service = MockHost.Resolve<TService>(scope.ServiceProvider);
+        await this._call(context.Variables, service, context.Deadline.Token);
         return EmptyStepResultContext.Instance;
     }
 }

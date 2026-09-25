@@ -58,13 +58,13 @@ public sealed class MockBuilder<TService>
             {
                 throw new FrameworkConfigurationException(
                     $"'{setup.Pattern.Describe()}' returns {setup.Pattern.Method.ReturnType.Name} but states no result.",
-                    recoverySteps: ["State Returns(...), Compute(...) or Throws(...) on the setup — a mocked call never invents a return value."]);
+                    recoverySteps: ["State Returns(...), Compute(...) or Throws(...) on the setup — or ReturnsAsync, Completes or ThrowsAsync for an async method. A mocked call never invents a return value."]);
             }
 
             if (setup.DeclaresUnreachableArtifacts)
             {
                 throw new FrameworkConfigurationException(
-                    $"'{setup.Pattern.Describe()}' always throws but declares ProducesArtifact; the artifact could never be published.",
+                    $"'{setup.Pattern.Describe()}' always fails but declares ProducesArtifact; the artifact could never be published.",
                     recoverySteps: ["Publish it by hand from a Compute body before throwing, or drop the declaration."]);
             }
         }

@@ -4,6 +4,7 @@ using TestFramework.Core.Artifacts;
 using TestFramework.Core.Exceptions;
 using TestFramework.Core.Timelines;
 using TestFramework.Mock.Artifacts;
+using TestFramework.Mock.Matching;
 
 namespace TestFramework.Mock;
 
@@ -45,11 +46,20 @@ public static class MockRunExtensions
     {
         ArgumentNullException.ThrowIfNull(run);
 
-        return run.Step(label).LastResult.Result is MockCallResult<TResult> result
-            ? result.Value
-            : throw new InvalidOperationException(
-                $"Step '{label}' did not produce a {nameof(MockCallResult<TResult>)}<{typeof(TResult).Name}>. "
-                + $"Its last result was '{run.Step(label).LastResult.Result?.GetType().Name ?? "null"}'.");
+        object? last = run.Step(label).LastResult.Result;
+        if (last is MockCallResult<TResult> result)
+        {
+            return result.Value;
+        }
+
+        throw new FrameworkConfigurationException(
+            last is null
+                ? $"Step '{label}' returned no value to read as {typeof(TResult).Name}."
+                : $"Step '{label}' returned {MockValueText.DescribeType(last.GetType())}, not {nameof(MockCallResult<TResult>)}<{typeof(TResult).Name}>.",
+            recoverySteps: [
+                "Read it with the call's own return type — for an awaited call, what its task yields.",
+                "A Host step for a void method or a plain Task returns no value to read.",
+            ]);
     }
 
     /// <summary>

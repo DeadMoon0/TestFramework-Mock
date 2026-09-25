@@ -36,10 +36,13 @@
     - class XPack : MockDefinition<IService> { protected override void Configure(MockBuilder<IService> mock) { ... } }
     - mock.Call(s => s.Method(MockArg.Any<string>(), "exact")) for value-returning and void calls
     - setup verbs: Returns(value), Returns((a, b) => ...), Throws(exception), Callback((a, b) => ...), Compute((a, b, artifacts) => ...), ProducesArtifact((a, b) => new(identity, payload))
+    - async setup verbs, only on task-returning methods: ReturnsAsync(value), Completes(), ThrowsAsync(exception)
     - artifacts.Publish(identity, payload) inside a Compute body
     - MockEnvironment.For(services => ...).Include<XPack>()
     - timeline.SetupRun(...).SetEnv(environment)
     - MockExt.Host((Service s) => s.Method(...)) and MockExt.Host(Var.Ref<T1>("name"), ..., (T1 a, ..., Service s) => ...), up to eight variable-bound arguments
+    - MockExt.Host((Service s, CancellationToken ct) => s.MethodAsync(ct)) hands the call the step's cancellation token
+    - MockExt.Host((Service s) => s.VoidMethod()) for synchronous void methods
     - .FindArtifact("identity", new MockArtifactFinder("identity")) and .CaptureArtifactVersion("identity")
     - run.Mock<IService>() -> MockInstance<IService>: CountCalls(...), RecordedCalls
     - run.MockResult<T>("label")
@@ -56,6 +59,8 @@
     - A value-returning setup must state Returns, Compute or Throws; a mocked call never invents a return value.
     - ProducesArtifact runs after the result, so a call that throws never publishes it; Throws plus ProducesArtifact on one setup is refused.
     - Host awaits Task and Task<T>; any other awaitable (ValueTask, a task of a task) is refused when the timeline is built.
+    - Every Host call runs in its own DI scope: scoped services are fresh per call and disposed when it ends; singletons are shared across the run.
+    - For an async call, ProducesArtifact publishes only when the returned task finishes successfully; ThrowsAsync returns a failed task instead of throwing at the call.
     - A later publish of an identity replaces the earlier one in the environment; a version in the run is a look the timeline took, not one per call.
     - A finder whose identity nothing has published yet finds nothing and logs a warning; two doubles publishing one identity are refused naming both.
     - Call refusals are thrown into the system under test; a system that swallows exceptions can hide them, but the call log still records the call with Matched = false.
@@ -105,6 +110,8 @@
 
 <anti_patterns>
     Avoid:
+    - Throws on an async method, which raises at the call; use ThrowsAsync
+    - reading a scoped service's lazily loaded data after the Host call ended; its scope is disposed
     - two setups that can match the same call, expecting the later one to win
     - a value-returning setup without Returns, Compute or Throws
     - returning a ValueTask from a Host lambda instead of calling .AsTask()

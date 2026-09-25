@@ -33,12 +33,33 @@ public class AritiesTests(ITestOutputHelper output)
             AssertSingleGenericOverload(typeof(MockCallSetup<>), "Callback", arity);
             AssertSingleGenericOverload(typeof(MockCallSetup<>), "Compute", arity);
             AssertSingleGenericOverload(typeof(MockCallSetup<>), "ProducesArtifact", arity);
+        }
+    }
 
-            // Host has three shapes per arity — sync result, awaited Task<T>, awaited Task — each with
-            // the variable references first and the call last.
-            AssertSingleHostOverload(arity, "TResult");
-            AssertSingleHostOverload(arity, "Task`1");
-            AssertSingleHostOverload(arity, "Task");
+    [Fact]
+    public void Host_HasEveryShape_ForEveryArgumentCount_FromNoneToTheCap()
+    {
+        // Six shapes per count, so a call always binds to an overload that treats it correctly: a
+        // missing shape silently hands the call to another one - a task returned unawaited, a void
+        // call that does not compile, a token the call never gets.
+        string[] expected =
+        [
+            "Func -> TResult",
+            "Func -> Task<TResult>",
+            "Func -> Task",
+            "Action",
+            "Func + CancellationToken -> Task<TResult>",
+            "Func + CancellationToken -> Task",
+        ];
+
+        for (int arity = 0; arity <= MaxArity; arity++)
+        {
+            string[] shapes = [.. typeof(MockExt).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Where(method => method.Name == "Host" && method.GetParameters().Length == arity + 1)
+                .Select(method => ShapeOf(method.GetParameters()[^1].ParameterType))
+                .OrderBy(shape => shape)];
+
+            Assert.Equal(expected.OrderBy(shape => shape).ToArray(), shapes);
         }
     }
 
@@ -114,13 +135,18 @@ public class AritiesTests(ITestOutputHelper output)
         Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.CreateFile("awaited.txt")));
     }
 
-    private static void AssertSingleHostOverload(int arity, string callReturnTypeName)
+    private static string ShapeOf(Type call)
     {
-        int found = typeof(MockExt).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Count(method => method.Name == "Host"
-                && method.GetParameters().Length == arity + 1
-                && method.GetParameters()[^1].ParameterType.GetGenericArguments()[^1].Name == callReturnTypeName);
-        Assert.True(found == 1, $"MockExt.Host with {arity} argument(s) returning {callReturnTypeName}: expected exactly one overload, found {found}.");
+        Type[] parts = call.GetGenericArguments();
+        if (call.Name.StartsWith("Action", StringComparison.Ordinal))
+        {
+            return "Action";
+        }
+
+        bool takesToken = parts.Length >= 2 && parts[^2] == typeof(System.Threading.CancellationToken);
+        Type result = parts[^1];
+        string resultName = result.IsGenericType ? $"{result.Name[..result.Name.IndexOf('`')]}<{result.GetGenericArguments()[0].Name}>" : result.Name;
+        return takesToken ? $"Func + CancellationToken -> {resultName}" : $"Func -> {resultName}";
     }
 
     private static void AssertSingleGenericOverload(Type type, string methodName, int arity)

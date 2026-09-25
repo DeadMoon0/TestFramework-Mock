@@ -56,6 +56,16 @@ public sealed partial class MockCallSetup<TService, TResult> : MockCallSetupBase
     }
 
     /// <summary>
+    /// Every matching call hands back an already-failed task - the async form of <see cref="Throws"/>,
+    /// reached through the async verbs so it only exists where the result is a task.
+    /// </summary>
+    internal MockCallSetup<TService, TResult> FailsWith(Func<TResult> failedTask)
+    {
+        this.SetFailedTask(() => failedTask()!);
+        return this;
+    }
+
+    /// <summary>
     /// Every matching call that completes publishes this artifact; a call that throws is never
     /// assumed to have produced it. Stackable — declare it again for a second artifact per call.
     /// The pack states what the call leaves behind; bringing it into the run, and when to look

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -30,9 +32,22 @@ public sealed class SmtpMailSender : IMailSender
 
 public sealed class SignupService(IMailSender mail)
 {
+    private readonly HashSet<string> _forgotten = [];
+
     public async Task<bool> RegisterAsync(string email)
     {
         return await mail.SendAsync(email, "Welcome");
+    }
+
+    public async Task<bool> RegisterAsync(string email, CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+        return await mail.SendAsync(email, "Welcome");
+    }
+
+    public void Forget(string email)
+    {
+        this._forgotten.Add(email);
     }
 }
 
@@ -42,7 +57,7 @@ public sealed class MailSenderPack : MockDefinition<IMailSender>
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
         mock.Call(m => m.SendAsync(MockArg.Any<string>(), MockArg.Any<string>()))
-            .Returns(Task.FromResult(true))
+            .ReturnsAsync(true)
             .ProducesArtifact((string to, string subject) => new("sentMail", $"{to}: {subject}"));
     }
 }
@@ -120,5 +135,27 @@ public class ReadmeSamplesTests
         Assert.Equal(2, run.ArtifactStore.GetMockArtifact("sentMail").VersionCount);
         Assert.Equal("ada@example.com: Welcome", run.ArtifactStore.GetMockArtifact("sentMail").First.Payload);
         Assert.Equal("grace@example.com: Welcome", run.ArtifactStore.GetMockArtifact("sentMail").Last.Payload);
+    }
+
+    // Mirrors the void and cancellation-token bullets under "Calling The System Under Test" in TestFramework.Mock/README.md.
+    [Fact]
+    public async Task HostShapes_VoidAndCancellationToken_AsTheReadmeShowsThem()
+    {
+        MockEnvironment environment = MockEnvironment.For(services =>
+        {
+            services.AddSingleton<IMailSender, SmtpMailSender>();
+            services.AddSingleton<SignupService>();
+        }).Include<MailSenderPack>();
+
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((SignupService signup, CancellationToken cancellation) =>
+                signup.RegisterAsync("ada@example.com", cancellation))).Name("register")
+            .Trigger(MockExt.Host((SignupService signup) => signup.Forget("ada@example.com"))).Name("forget")
+            .Build();
+
+        TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();
+
+        run.EnsureRanToCompletion();
+        Assert.True(run.MockResult<bool>("register"));
     }
 }

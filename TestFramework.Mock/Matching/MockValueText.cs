@@ -24,6 +24,19 @@ internal static class MockValueText
         };
     }
 
+    /// <summary>
+    /// A type as a reader writes it - <c>ValueTask&lt;Boolean&gt;</c> rather than <c>ValueTask`1</c>.
+    /// </summary>
+    public static string DescribeType(System.Type type)
+    {
+        if (!type.IsGenericType)
+        {
+            return type.Name;
+        }
+
+        return $"{type.Name[..type.Name.IndexOf('`')]}<{string.Join(", ", type.GetGenericArguments().Select(DescribeType))}>";
+    }
+
     private static string DescribeCollection(ICollection collection)
     {
         IEnumerable<string> shown = collection.Cast<object?>().Take(ElementBudget).Select(Describe);

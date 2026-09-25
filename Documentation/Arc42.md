@@ -81,8 +81,9 @@ that leaves the process.
    component runs the author's composition, creates a fresh instance of each pack, removes every registration of the
    replaced service, adds the double as a singleton, records `mock.host/<service> = <pack>` on the run's
    effective settings, builds the provider and places the host state in the run's state slot.
-2. **A hosted call.** A `Host` step resolves the service from the host and calls it with arguments bound
-   from run variables. A returned task is awaited. Calls the system under test makes into a double pass
+2. **A hosted call.** A `Host` step opens a scope for the call, resolves the service from it and calls it
+   with arguments bound from run variables — and, when the call asks for it, the step's cancellation
+   token. A returned task is awaited, and the scope is disposed when the call ends. Calls the system under test makes into a double pass
    through the interceptor: recorded, matched against exactly one setup, answered; declared artifacts are
    recorded after the result.
 3. **Finding.** A `FindArtifact` step with a `MockArtifactFinder` asks the host for the identity. If a
@@ -142,7 +143,6 @@ executed inside the test host process. There is no service deployment unit.
 
 - Interfaces and methods only: properties, events and classes cannot be mocked yet
 - Matchers are exact values and `MockArg.Any<T>()`; no predicate matcher, no call sequences
-- `Host` does not pass the step's cancellation token to the call, and has no synchronous `void` overload
 - Recorded arguments and payloads are held by reference, so later mutation by the system under test
   changes the record
 

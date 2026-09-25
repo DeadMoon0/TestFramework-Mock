@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 using TestFramework.Mock;
 
@@ -31,6 +32,20 @@ public interface IValueSink
     int Bytes(byte[] data);
 
     int Maybe(int? value);
+}
+
+/// <summary>
+/// The four task shapes an async dependency returns.
+/// </summary>
+public interface IAsyncSink
+{
+    Task<int> GetAsync();
+
+    ValueTask<int> GetValueAsync();
+
+    Task SendAsync(string what);
+
+    ValueTask SendValueAsync();
 }
 
 /// <summary>

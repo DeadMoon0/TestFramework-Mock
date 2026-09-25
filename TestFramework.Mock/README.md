@@ -29,7 +29,7 @@ public sealed class MailSenderPack : MockDefinition<IMailSender>
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
         mock.Call(m => m.SendAsync(MockArg.Any<string>(), MockArg.Any<string>()))
-            .Returns(Task.FromResult(true))
+            .ReturnsAsync(true)
             .ProducesArtifact((string to, string subject) => new("sentMail", $"{to}: {subject}"));
     }
 }
@@ -104,9 +104,16 @@ matches is refused naming them all. There is no precedence rule; narrow the matc
 | `Returns(value)` | every matching call returns this value |
 | `Returns((a, b) => ...)` | the result computed from the call's typed arguments |
 | `Throws(exception)` | every matching call throws it |
+| `ReturnsAsync(value)` | for a method returning `Task<T>` or `ValueTask<T>`: a task already completed with the value |
+| `Completes()` | for a method returning `Task` or `ValueTask`: a task already completed |
+| `ThrowsAsync(exception)` | for any task-returning method: the call returns a task that has already failed, as a real async method does |
 | `Callback((a, b) => ...)` | a body for a void call; a void setup with no body simply does nothing |
 | `Compute((a, b, artifacts) => ...)` | the primitive: the result plus `artifacts.Publish(identity, payload)` by hand |
 | `ProducesArtifact((a, b) => new(identity, payload))` | records a payload when the call completes; stackable |
+
+The async verbs exist only on a setup for a task-returning method, so `ReturnsAsync` on a method returning
+`int` does not compile. Prefer `ThrowsAsync` over `Throws` for an async method: `Throws` raises the
+exception at the call itself, which no real async method does.
 
 Typed lambdas exist for one to eight arguments. Their parameter types are checked against the mocked
 method when the pack is instantiated, so a mistyped lambda fails there, naming the method's signature —
@@ -119,7 +126,9 @@ The rules a pack is held to:
 - **A value is never invented.** A setup for a method that returns something must state `Returns`,
   `Compute` or `Throws`, and states it once.
 - **A declared artifact is what a completed call produced.** `ProducesArtifact` runs after the result,
-  so a call that throws never publishes it. What a `Compute` body published by hand before throwing
+  so a call that throws never publishes it. For an async call, completed means its task finished
+  successfully: a task that later fails publishes nothing, and `ThrowsAsync` with `ProducesArtifact` is
+  refused like `Throws` is. What a `Compute` body published by hand before throwing
   stands. `Throws` together with `ProducesArtifact` on one setup is refused as unreachable.
 - **Interfaces only.** The service must be an interface; class mocking is not supported.
 - **Declared once.** Every setup is sealed when the double is built. A setup object or builder kept past
@@ -174,7 +183,20 @@ TimelineRun run = await timeline.SetupRun()
   result is what the task yielded. `async` lambdas work the same way.
 - Any other awaitable — a `ValueTask`, a task of a task — is refused when the timeline is built, because
   it would not be awaited. Call `.AsTask()` on a `ValueTask`.
-- `run.MockResult<T>(label)` reads what a labelled `Host` step returned.
+- A synchronous `void` method is called the same way: `MockExt.Host((SignupService signup) => signup.Forget("ada@example.com"))`.
+- Add a `CancellationToken` behind the service to receive the step's own — cancelled when the step times
+  out or the run is stopped — so a call that honours it stops with its step:
+
+  ```csharp
+  .Trigger(MockExt.Host((SignupService signup, CancellationToken cancellation) =>
+      signup.RegisterAsync("ada@example.com", cancellation))).Name("register")
+  ```
+
+- Every call runs in a scope of its own, the way production opens one per request: scoped services are
+  created fresh for the call and disposed when it ends, singletons are shared across the run. A result
+  that still needs a scoped service after the call — a lazily loaded entity, say — is read inside the call.
+- `run.MockResult<T>(label)` reads what a labelled `Host` step returned, with `T` the call's own return
+  type — for an awaited call, what its task yields.
 
 ## Artifacts From Calls
 
@@ -247,8 +269,6 @@ The full list, with when each one fires, is in
 
 - Interfaces only, and methods only — properties and events cannot be set up yet.
 - Matchers are exact values and `MockArg.Any<T>()`; there is no predicate matcher and no call sequences.
-- `Host` does not hand the step's cancellation token to the call, and has no overload for a synchronous
-  `void` method.
 - Recorded arguments and payloads are held by reference: an object the system under test changes after
   the call changes the record too. Publish a copy when that matters.
 
