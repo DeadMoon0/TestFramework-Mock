@@ -1,3 +1,5 @@
+using TestFramework.Core.Conventions;
+
 namespace TestFramework.Mock.Artifacts;
 
 /// <summary>
@@ -7,4 +9,5 @@ namespace TestFramework.Mock.Artifacts;
 /// </summary>
 /// <param name="Identity">The name the payload is recorded, and found, under.</param>
 /// <param name="Payload">The data captured when the mocked call happened.</param>
+[ClosedShape("What a double produced is its identity and its payload; anything more about it belongs in the payload.")]
 public sealed record MockArtifact(string Identity, object? Payload);

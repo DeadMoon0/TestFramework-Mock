@@ -19,9 +19,23 @@ namespace TestFramework.Mock;
 /// <summary>
 /// What an in-process call produced.
 /// </summary>
+/// <remarks>
+/// Built only by the hosted call, so its constructor is internal and its member is a property, and a result that
+/// learns more - how long the call took - does not break the readers compiled against it.
+/// </remarks>
 /// <typeparam name="TResult">The called method's return type — for an awaited call, what its task yielded.</typeparam>
-/// <param name="Value">The returned value.</param>
-public sealed record MockCallResult<TResult>(TResult Value) : StepResultContext;
+public sealed record MockCallResult<TResult> : StepResultContext
+{
+    internal MockCallResult(TResult value)
+    {
+        this.Value = value;
+    }
+
+    /// <summary>
+    /// The returned value.
+    /// </summary>
+    public TResult Value { get; }
+}
 
 /// <summary>
 /// Resolves one service from the run's mock host and calls it — the trigger that drives the

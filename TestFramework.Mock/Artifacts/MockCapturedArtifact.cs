@@ -12,7 +12,7 @@ namespace TestFramework.Mock.Artifacts;
 /// One captured payload: what the setup body handed to <see cref="MockArtifacts.Publish(MockArtifact)"/>,
 /// as it was at call time. Repeated publishes under one identity are this artifact's versions.
 /// </summary>
-public class MockCapturedArtifactData(object? payload)
+public sealed class MockCapturedArtifactData(object? payload)
     : ArtifactData<MockCapturedArtifactData, MockCapturedArtifactDescriber, MockCapturedArtifactReference>
 {
     /// <summary>
@@ -34,7 +34,7 @@ public class MockCapturedArtifactData(object? payload)
 /// double is called — and its cleanup is deliberately void, because nothing outside the run
 /// exists to remove.
 /// </summary>
-public class MockCapturedArtifactDescriber
+public sealed class MockCapturedArtifactDescriber
     : ArtifactDescriber<MockCapturedArtifactDescriber, MockCapturedArtifactData, MockCapturedArtifactReference>
 {
     /// <inheritdoc />
@@ -63,7 +63,7 @@ public class MockCapturedArtifactDescriber
 /// re-reads the latest payload published under that identity, which is what lets the timeline's
 /// version verb work against it like against any other artifact.
 /// </summary>
-public class MockCapturedArtifactReference
+public sealed class MockCapturedArtifactReference
     : ArtifactReference<MockCapturedArtifactReference, MockCapturedArtifactDescriber, MockCapturedArtifactData>
 {
     private readonly string _identity;
@@ -71,7 +71,10 @@ public class MockCapturedArtifactReference
     /// <summary>
     /// Creates the reference for one published identity.
     /// </summary>
-    public MockCapturedArtifactReference(string identity)
+    /// <remarks>
+    /// Internal: <see cref="MockArtifactFinder"/> is the one way to make one.
+    /// </remarks>
+    internal MockCapturedArtifactReference(string identity)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identity);
 
