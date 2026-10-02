@@ -149,8 +149,10 @@ public abstract class MockCallSetupBase
         if (this._response is not null)
         {
             throw new FrameworkConfigurationException(
-                $"'{this.Pattern.Describe()}' already states its result; a setup states it once.",
-                recoverySteps: ["Keep one of Returns, Compute, Throws or their async forms on this setup — or add a second mock.Call(...) if two behaviours are meant."]);
+                $"'{this.Pattern.Describe()}' already states its result; a setup states it once.")
+            {
+                RecoverySteps = ["Keep one of Returns, Compute, Throws or their async forms on this setup — or add a second mock.Call(...) if two behaviours are meant."],
+            };
         }
 
         this._response = response;
@@ -168,8 +170,10 @@ public abstract class MockCallSetupBase
         if (this._sealed)
         {
             throw new FrameworkStateException(
-                $"'{this.Pattern.Describe()}' was changed after its double was built; a setup is declared once, in Configure.",
-                recoverySteps: ["State every Returns, Throws, Compute and ProducesArtifact inside Configure, and do not keep the setup object beyond it."]);
+                $"'{this.Pattern.Describe()}' was changed after its double was built; a setup is declared once, in Configure.")
+            {
+                RecoverySteps = ["State every Returns, Throws, Compute and ProducesArtifact inside Configure, and do not keep the setup object beyond it."],
+            };
         }
     }
 
@@ -185,9 +189,11 @@ public abstract class MockCallSetupBase
         if (!fits)
         {
             throw new FrameworkConfigurationException(
-                $"The lambda on '{this.Pattern.Describe()}' takes ({string.Join(", ", lambdaArgumentTypes.Select(t => t.Name))}), which does not fit the method.",
-                recoverySteps: ["Match the lambda's parameters to the mocked method's signature."],
-                availableOptions: [.. parameters.Select(p => $"{p.ParameterType.Name} {p.Name}")]);
+                $"The lambda on '{this.Pattern.Describe()}' takes ({string.Join(", ", lambdaArgumentTypes.Select(t => t.Name))}), which does not fit the method.")
+            {
+                RecoverySteps = ["Match the lambda's parameters to the mocked method's signature."],
+                AvailableOptions = [.. parameters.Select(p => $"{p.ParameterType.Name} {p.Name}")],
+            };
         }
     }
 

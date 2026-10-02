@@ -31,8 +31,10 @@ public static class MockRunExtensions
         }
 
         throw new FrameworkConfigurationException(
-            "This run had no mock host, so it ran against no doubles.",
-            recoverySteps: ["Set the environment on the run: SetupRun(...).SetEnv(MockEnvironment.For(...))."]);
+            "This run had no mock host, so it ran against no doubles.")
+        {
+            RecoverySteps = ["Set the environment on the run: SetupRun(...).SetEnv(MockEnvironment.For(...))."],
+        };
     }
 
     /// <summary>
@@ -55,11 +57,13 @@ public static class MockRunExtensions
         throw new FrameworkConfigurationException(
             last is null
                 ? $"Step '{label}' returned no value to read as {typeof(TResult).Name}."
-                : $"Step '{label}' returned {MockValueText.DescribeType(last.GetType())}, not {nameof(MockCallResult<TResult>)}<{typeof(TResult).Name}>.",
-            recoverySteps: [
+                : $"Step '{label}' returned {MockValueText.DescribeType(last.GetType())}, not {nameof(MockCallResult<TResult>)}<{typeof(TResult).Name}>.")
+        {
+            RecoverySteps = [
                 "Read it with the call's own return type — for an awaited call, what its task yields.",
                 "A Host step for a void method or a plain Task returns no value to read.",
-            ]);
+            ],
+        };
     }
 
     /// <summary>

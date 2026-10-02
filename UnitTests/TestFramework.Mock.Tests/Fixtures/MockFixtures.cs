@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 using TestFramework.Mock;
+using TestFramework.Core.Steps;
 
 namespace TestFramework.Mock.Tests.Fixtures;
 
@@ -79,7 +80,7 @@ public sealed class InlinePack<TService> : MockDefinition<TService>
 
     public MockInstance<TService> Create()
     {
-        return this.CreateInstance();
+        return this.CreateInstance(RunContext.Detached());
     }
 
     protected override void Configure(MockBuilder<TService> mock)

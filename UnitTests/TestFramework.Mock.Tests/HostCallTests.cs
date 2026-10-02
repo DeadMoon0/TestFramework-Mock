@@ -38,7 +38,7 @@ public class HostCallTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((ReportService service) => service.Remove("old.txt"))).Name("remove")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.Delete("old.txt")));
@@ -51,7 +51,7 @@ public class HostCallTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((CancellableReportService service, CancellationToken cancellation) => service.TokenCanBeCancelledAsync(cancellation))).Name("token")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("token"));
@@ -67,7 +67,7 @@ public class HostCallTests(ITestOutputHelper output)
                 .Name("wait").WithTimeOut(TimeSpan.FromMilliseconds(300))
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         StepResultGeneric result = run.Step("wait").LastResult;
         Assert.Equal(StepState.Timeout, result.State);
@@ -85,7 +85,7 @@ public class HostCallTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((DisposalLog log) => log.Disposed)).Name("disposed")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.NotEqual(run.MockResult<Guid>("first"), run.MockResult<Guid>("second"));
@@ -100,7 +100,7 @@ public class HostCallTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((ReportService service) => service.Remove("a.txt"))).Name("remove")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
         run.EnsureRanToCompletion();
 
         FrameworkConfigurationException wrongType = Assert.Throws<FrameworkConfigurationException>(() => run.MockResult<string>("save"));

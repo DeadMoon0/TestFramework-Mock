@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 
 using Castle.DynamicProxy;
 
+using TestFramework.Core.Steps;
 using TestFramework.Mock.Artifacts;
 using TestFramework.Mock.Interception;
 using TestFramework.Mock.Matching;
@@ -24,11 +25,13 @@ public sealed class MockInstance<TService> : MockInstanceGeneric
     // Castle caches generated proxy types per generator, so the family shares one.
     private static readonly ProxyGenerator _proxyGenerator = new();
 
-    private readonly MockCallRecorder _recorder = new();
-    private readonly MockArtifactRecord _artifactRecord = new();
+    private readonly MockCallRecorder _recorder;
+    private readonly MockArtifactRecord _artifactRecord;
 
-    internal MockInstance(IReadOnlyList<MockCallSetupBase> setups)
+    internal MockInstance(IReadOnlyList<MockCallSetupBase> setups, RunContext context)
     {
+        this._recorder = new MockCallRecorder(context);
+        this._artifactRecord = new MockArtifactRecord(context);
         MockInterceptor interceptor = new(setups, this._recorder, new MockArtifacts(this._artifactRecord));
         this.Object = (TService)_proxyGenerator.CreateInterfaceProxyWithoutTarget(typeof(TService), interceptor);
     }
@@ -66,17 +69,6 @@ public sealed class MockInstance<TService> : MockInstanceGeneric
     public int CountCalls(Expression<Action<TService>> call)
     {
         return this.Count(CallPatternParser.Parse(call));
-    }
-
-    /// <summary>
-    /// Closes the double with its run: the log becomes immutable and further calls are refused.
-    /// Internal for the same reason Core's run-end freezing is: reachable from outside, it would
-    /// let a caller freeze a running run's double and stop its system under test mid-flight.
-    /// </summary>
-    internal sealed override void FreezeForRunEnd()
-    {
-        this._recorder.FreezeForRunEnd();
-        this._artifactRecord.FreezeForRunEnd();
     }
 
     private int Count(CallPattern pattern)

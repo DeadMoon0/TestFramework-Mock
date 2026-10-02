@@ -1,6 +1,7 @@
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 
-using TestFramework.Core.Exceptions;
+using TestFramework.Core.Runner;
+using TestFramework.Core.Steps;
 
 namespace TestFramework.Mock.Artifacts;
 
@@ -14,31 +15,37 @@ namespace TestFramework.Mock.Artifacts;
 /// recorded here into the run the way it brings in anything an outside system produced — through
 /// Core's finder and version verbs, from a step, under that step's own context.
 ///
-/// Thread-safe, because the system under test calls its dependencies from whatever thread it likes.
+/// It is kept as a <see cref="RunRecord{T}"/>, so it follows the run's own rules: it finishes when the run
+/// does, and a publish after that is dropped and reported rather than thrown into the system under test.
 /// </summary>
 internal sealed class MockArtifactRecord
 {
-    private readonly ConcurrentDictionary<string, object?> _latestByIdentity = new();
-    private volatile bool _frozen;
+    private readonly RunRecord<MockArtifact> _published;
+
+    public MockArtifactRecord(RunContext context)
+    {
+        this._published = RunRecord<MockArtifact>.Open(context, "mock artifacts");
+    }
 
     public void Publish(MockArtifact artifact)
     {
-        if (this._frozen)
-        {
-            throw new FrameworkStateException(
-                $"The run is finished; artifact '{artifact.Identity}' can no longer be published.");
-        }
-
-        this._latestByIdentity[artifact.Identity] = artifact.Payload;
+        this._published.Append(artifact);
     }
 
     public bool TryGetLatest(string identity, out object? payload)
     {
-        return this._latestByIdentity.TryGetValue(identity, out payload);
-    }
+        IReadOnlyList<MockArtifact> published = this._published.Snapshot();
 
-    public void FreezeForRunEnd()
-    {
-        this._frozen = true;
+        for (int index = published.Count - 1; index >= 0; index--)
+        {
+            if (string.Equals(published[index].Identity, identity, System.StringComparison.Ordinal))
+            {
+                payload = published[index].Payload;
+                return true;
+            }
+        }
+
+        payload = null;
+        return false;
     }
 }

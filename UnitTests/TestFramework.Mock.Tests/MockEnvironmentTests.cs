@@ -34,7 +34,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     [Fact]
     public async Task TheHostedCallRuns_AgainstThePacksDouble_NotTheRealDependency()
     {
-        TimelineRun run = await _timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await _timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("save"));
@@ -44,7 +44,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     [Fact]
     public async Task TheFinishedRun_SaysWhichPackStoodWhere()
     {
-        TimelineRun run = await _timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await _timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.True(run.EffectiveSettings.TryGet(MockResourceKinds.Host, typeof(IFileStore).FullName!, out string? pack));
@@ -52,14 +52,20 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task TheDouble_FreezesWithItsRun()
+    public async Task TheDouble_FinishesWithItsRun_AndStillAnswersALateCall()
     {
-        TimelineRun run = await _timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        // The records close with the run, not with the host's teardown. A late call - the system under test
+        // still doing background work - is answered and dropped from the record, never thrown into the system
+        // under test's thread, where nobody would observe it and it could take the test process down.
+        TimelineRun run = await _timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
         run.EnsureRanToCompletion();
 
         MockInstance<IFileStore> mock = run.Mock<IFileStore>();
-        Assert.Throws<FrameworkStateException>(() => mock.Object.CreateFile("after-the-run.txt"));
+
+        Assert.True(mock.Object.CreateFile("after-the-run.txt"));
         Assert.Single(mock.RecordedCalls);
+        Assert.True(mock.TryGetLatestPublish("createdFile", out object? payload));
+        Assert.Equal("report.txt", payload);
     }
 
     [Fact]
@@ -67,7 +73,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     {
         // This timeline finds nothing, so the payload is recorded where the double left it and the
         // run's artifact store never hears of it - as with a file nobody went looking for.
-        TimelineRun run = await _timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await _timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
         run.EnsureRanToCompletion();
 
         Assert.True(run.Mock<IFileStore>().TryGetLatestPublish("createdFile", out object? payload));
@@ -79,8 +85,8 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     public async Task TwoRuns_GetTwoDoubles_NothingLeaksBetweenThem()
     {
         MockEnvironment environment = CreateEnvironment();
-        TimelineRun first = await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
-        TimelineRun second = await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun first = await _timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
+        TimelineRun second = await _timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         first.EnsureRanToCompletion();
         second.EnsureRanToCompletion();
@@ -107,7 +113,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         // Damage before: the run started and the Host step failed inside it. Nothing declares the service a
         // Host step calls unless a MockEnvironment does, and that is now checked before anything starts.
         FrameworkConfigurationException refusal = await Assert.ThrowsAsync<FrameworkConfigurationException>(
-            () => _timeline.SetupRun(null, output).RunAsync());
+            () => _timeline.SetupRun(null, output.WriteLine).RunAsync());
 
         Assert.Contains($"requires mock.host '{typeof(ReportService).FullName}'", refusal.Message);
     }
@@ -122,7 +128,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         }).Include<FileStorePack>();
 
         FrameworkConfigurationException refusal = await Assert.ThrowsAsync<FrameworkConfigurationException>(
-            () => _timeline.SetupRun(null, output).SetEnv(environment).RunAsync());
+            () => _timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync());
 
         Assert.Contains($"requires mock.host '{typeof(ReportService).FullName}'", refusal.Message);
         Assert.Contains(refusal.AvailableOptions, option => option.Contains(typeof(IFileStore).FullName!, StringComparison.Ordinal));
@@ -136,7 +142,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
             .Build();
         MockEnvironment environment = MockEnvironment.For(services => services.AddSingleton(typeof(Repository<>)));
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.Equal("repository of String", run.MockResult<string>("describe"));
@@ -157,7 +163,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
             services.AddSingleton<KeyedReportService>();
         }).Include<FileStorePack>();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.CreateFile("a.txt")));
@@ -176,8 +182,8 @@ public class MockEnvironmentTests(ITestOutputHelper output)
             services.AddSingleton<ReportService>();
         }).Include<CountingPack>();
 
-        TimelineRun first = await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
-        TimelineRun second = await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun first = await _timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
+        TimelineRun second = await _timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         first.EnsureRanToCompletion();
         second.EnsureRanToCompletion();
@@ -191,7 +197,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         // Damage without the seal: a later Include silently changed what the next runs hosted, and raced
         // with runs already reading the pack list.
         MockEnvironment environment = CreateEnvironment();
-        (await _timeline.SetupRun(null, output).SetEnv(environment).RunAsync()).EnsureRanToCompletion();
+        (await _timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync()).EnsureRanToCompletion();
 
         Assert.Same(environment, environment.Include<FileStorePack>());
         FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => environment.Include<AuditLogPack>());
@@ -201,9 +207,9 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     [Fact]
     public async Task WhatTheSystemUnderTestDoesWhileBeingDisposed_StillReachesTheDouble()
     {
-        // Damage without the order: the double froze before the provider disposed the service, so the
-        // flush inside Dispose was refused - on a background thread, a refusal like that can end the
-        // test process.
+        // Damage without it: the double closed before the provider disposed the service, so the flush inside
+        // Dispose was refused - on a background thread, a refusal like that can end the test process. The
+        // records now close with the run itself, after the environment's teardown.
         Timeline timeline = Timeline.Create()
             .Trigger(MockExt.Host((FlushingReportService service) => service.Save("report.txt"))).Name("save")
             .Build();
@@ -213,12 +219,13 @@ public class MockEnvironmentTests(ITestOutputHelper output)
             services.AddSingleton<FlushingReportService>();
         }).Include<FileStorePack>();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
         MockInstance<IFileStore> mock = run.Mock<IFileStore>();
         Assert.Equal(1, mock.CountCalls(f => f.CreateFile("flushed-on-dispose.txt")));
         Assert.All(mock.RecordedCalls, call => Assert.True(call.Matched));
-        Assert.Throws<FrameworkStateException>(() => mock.Object.CreateFile("after-the-run.txt"));
+        Assert.True(mock.Object.CreateFile("after-the-run.txt"));
+        Assert.Equal(0, mock.CountCalls(f => f.CreateFile("after-the-run.txt")));
     }
 }

@@ -40,17 +40,21 @@ internal sealed class MockInterceptor : IInterceptor
         if (matches.Count == 0)
         {
             throw new FrameworkConfigurationException(
-                $"No setup matches '{Describe(invocation.Method, arguments)}'.",
-                recoverySteps: ["Add a mock.Call(...) for this call to the definition, or widen an existing matcher."],
-                availableOptions: [.. this._setups.Select(setup => setup.Pattern.Describe())]);
+                $"No setup matches '{Describe(invocation.Method, arguments)}'.")
+            {
+                RecoverySteps = ["Add a mock.Call(...) for this call to the definition, or widen an existing matcher."],
+                AvailableOptions = [.. this._setups.Select(setup => setup.Pattern.Describe())],
+            };
         }
 
         if (matches.Count > 1)
         {
             throw new FrameworkConfigurationException(
-                $"'{Describe(invocation.Method, arguments)}' matches more than one setup; two candidates for one call is a stated error, never a coin toss.",
-                recoverySteps: ["Narrow the overlapping matchers so exactly one setup can answer this call."],
-                availableOptions: [.. matches.Select(setup => setup.Pattern.Describe())]);
+                $"'{Describe(invocation.Method, arguments)}' matches more than one setup; two candidates for one call is a stated error, never a coin toss.")
+            {
+                RecoverySteps = ["Narrow the overlapping matchers so exactly one setup can answer this call."],
+                AvailableOptions = [.. matches.Select(setup => setup.Pattern.Describe())],
+            };
         }
 
         invocation.ReturnValue = matches[0].Invoke(arguments, this._artifacts);

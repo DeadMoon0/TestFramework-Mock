@@ -42,7 +42,7 @@ public class MockFindTests(ITestOutputHelper output)
             .CaptureArtifactVersion("createdFile")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         ArtifactInstance<MockCapturedArtifactDescriber, MockCapturedArtifactData, MockCapturedArtifactReference> artifact =
@@ -63,7 +63,7 @@ public class MockFindTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((ReportService service) => service.Save("late.txt"))).Name("save")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.DoesNotContain(run.ArtifactStore.GetAll(), artifact => artifact.Identifier.Identifier == "createdFile");

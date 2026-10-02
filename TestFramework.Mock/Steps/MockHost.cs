@@ -55,8 +55,10 @@ internal static class MockHost
         if (!context.State.TryGet(out MockHostState? host) || host is null)
         {
             throw new FrameworkConfigurationException(
-                "This run has no mock host, so no step can reach the hosted services.",
-                recoverySteps: ["Set the environment on the run: SetupRun(...).SetEnv(MockEnvironment.For(...))."]);
+                "This run has no mock host, so no step can reach the hosted services.")
+            {
+                RecoverySteps = ["Set the environment on the run: SetupRun(...).SetEnv(MockEnvironment.For(...))."],
+            };
         }
 
         return host;
@@ -70,8 +72,10 @@ internal static class MockHost
     {
         return callScope.GetService<TService>()
             ?? throw new FrameworkConfigurationException(
-                $"'{typeof(TService).Name}' is not registered in the hosted services.",
-                recoverySteps: ["Register it in the composition handed to MockEnvironment.For(...)."]);
+                $"'{typeof(TService).Name}' is not registered in the hosted services.")
+            {
+                RecoverySteps = ["Register it in the composition handed to MockEnvironment.For(...)."],
+            };
     }
 
     /// <summary>
@@ -83,7 +87,7 @@ internal static class MockHost
         {
             if (argument.HasIdentifier)
             {
-                contract.Inputs.Add(new StepIOEntry(argument.Identifier!.Identifier, StepIOKind.Variable));
+                contract.Input(argument);
             }
         }
     }

@@ -31,8 +31,10 @@ public sealed class MockArtifacts
         if (artifact is null)
         {
             throw new FrameworkConfigurationException(
-                "A setup published a null artifact.",
-                recoverySteps: ["Return a MockArtifact with an identity and the payload to capture."]);
+                "A setup published a null artifact.")
+            {
+                RecoverySteps = ["Return a MockArtifact with an identity and the payload to capture."],
+            };
         }
 
         this._record.Publish(artifact);

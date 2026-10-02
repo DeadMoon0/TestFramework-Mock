@@ -1,6 +1,7 @@
 using System;
 
 using TestFramework.Core.Exceptions;
+using TestFramework.Core.Steps;
 
 namespace TestFramework.Mock;
 
@@ -21,26 +22,28 @@ public abstract class MockDefinition<TService> : MockDefinitionGeneric
     /// </summary>
     protected abstract void Configure(MockBuilder<TService> mock);
 
-    internal sealed override MockInstanceGeneric CreateInstanceGeneric()
+    internal sealed override MockInstanceGeneric CreateInstanceGeneric(RunContext context)
     {
-        return this.CreateInstance();
+        return this.CreateInstance(context);
     }
 
     /// <summary>
     /// One run's live double. Internal: instances are the engine's to create — later the
     /// environment's, per run — never a test body's.
     /// </summary>
-    internal MockInstance<TService> CreateInstance()
+    internal MockInstance<TService> CreateInstance(RunContext context)
     {
         if (!typeof(TService).IsInterface)
         {
             throw new FrameworkConfigurationException(
-                $"'{typeof(TService).Name}' is not an interface; the engine proxies interfaces only for now.",
-                recoverySteps: ["Mock the service's interface instead.", "Class mocking (virtual members) is a later stage of the engine."]);
+                $"'{typeof(TService).Name}' is not an interface; the engine proxies interfaces only for now.")
+            {
+                RecoverySteps = ["Mock the service's interface instead.", "Class mocking (virtual members) is a later stage of the engine."],
+            };
         }
 
         MockBuilder<TService> builder = new();
         this.Configure(builder);
-        return new MockInstance<TService>(builder.BuildSetups());
+        return new MockInstance<TService>(builder.BuildSetups(), context);
     }
 }

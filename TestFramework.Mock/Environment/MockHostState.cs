@@ -46,9 +46,11 @@ public sealed class MockHostState
         }
 
         throw new FrameworkConfigurationException(
-            $"No pack in this run replaces '{typeof(TService).Name}'.",
-            recoverySteps: ["Include a MockDefinition for the service on the MockEnvironment."],
-            availableOptions: [.. this._instances.Keys.Select(type => type.Name)]);
+            $"No pack in this run replaces '{typeof(TService).Name}'.")
+        {
+            RecoverySteps = ["Include a MockDefinition for the service on the MockEnvironment."],
+            AvailableOptions = [.. this._instances.Keys.Select(type => type.Name)],
+        };
     }
 
     /// <summary>
@@ -61,21 +63,15 @@ public sealed class MockHostState
         if (publishers.Length > 1)
         {
             throw new FrameworkConfigurationException(
-                $"More than one double published '{identity}', so which one it names is ambiguous.",
-                recoverySteps: ["Give each pack's ProducesArtifact or Publish its own identity."],
-                availableOptions: [.. publishers.Select(instance => instance.ServiceType.Name)]);
+                $"More than one double published '{identity}', so which one it names is ambiguous.")
+            {
+                RecoverySteps = ["Give each pack's ProducesArtifact or Publish its own identity."],
+                AvailableOptions = [.. publishers.Select(instance => instance.ServiceType.Name)],
+            };
         }
 
         payload = null;
         return publishers.Length == 1 && publishers[0].TryGetLatestPublish(identity, out payload);
-    }
-
-    internal void FreezeForRunEnd()
-    {
-        foreach (MockInstanceGeneric instance in this._instances.Values)
-        {
-            instance.FreezeForRunEnd();
-        }
     }
 
     internal Task DisposeProviderAsync()

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System;
 using System.Linq;
 
 using TestFramework.Core.Exceptions;
@@ -6,7 +8,7 @@ using TestFramework.Mock.Tests.Fixtures;
 
 namespace TestFramework.Mock.Tests;
 
-public class RecordingAndFreezeTests
+public class RecordingTests
 {
     [Fact]
     public void EveryCallIsRecorded_InOrder_WithItsArguments()
@@ -52,16 +54,17 @@ public class RecordingAndFreezeTests
     }
 
     [Fact]
-    public void AFrozenMock_RefusesFurtherCalls_AndKeepsItsLog()
+    public void ARecordedCallsArgumentsCannotBeEditedThroughACast()
     {
+        // The log a finished run hands out is a record of what happened; an array handed out is one cast away
+        // from rewriting it.
         MockInstance<IFileStore> mock = new InlinePack<IFileStore>(m =>
             m.Call(f => f.CreateFile(MockArg.Any<string>())).Returns(true)).Create();
-        mock.Object.CreateFile("before.txt");
+        mock.Object.CreateFile("kept.txt");
 
-        mock.FreezeForRunEnd();
+        IReadOnlyList<object?> arguments = Assert.Single(mock.RecordedCalls).Arguments;
 
-        FrameworkStateException refusal = Assert.Throws<FrameworkStateException>(() => mock.Object.CreateFile("after.txt"));
-        Assert.Contains("finished", refusal.Message);
-        Assert.Single(mock.RecordedCalls);
+        Assert.False(arguments is object?[]);
+        Assert.Throws<NotSupportedException>(() => ((IList<object?>)arguments)[0] = "rewritten.txt");
     }
 }

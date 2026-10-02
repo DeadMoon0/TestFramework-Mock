@@ -20,8 +20,10 @@ internal static class CallPatternParser
             || !ReferenceEquals(methodCall.Object, call.Parameters[0]))
         {
             throw new FrameworkConfigurationException(
-                $"A setup must be a single direct method call on the mocked service; '{call.Body}' is not one.",
-                recoverySteps: ["Write the setup as mock.Call(m => m.Method(...)), with MockArg matchers or values as arguments."]);
+                $"A setup must be a single direct method call on the mocked service; '{call.Body}' is not one.")
+            {
+                RecoverySteps = ["Write the setup as mock.Call(m => m.Method(...)), with MockArg matchers or values as arguments."],
+            };
         }
 
         List<IArgMatcher> matchers = [];
@@ -53,8 +55,10 @@ internal static class CallPatternParser
         if (MatcherFinder.Contains(argument))
         {
             throw new FrameworkConfigurationException(
-                $"MockArg is used inside the argument '{argument}', where it would be evaluated once to a fixed value instead of matching.",
-                recoverySteps: ["Use MockArg.Any<T>() as a whole argument, or state the exact value the argument must have."]);
+                $"MockArg is used inside the argument '{argument}', where it would be evaluated once to a fixed value instead of matching.")
+            {
+                RecoverySteps = ["Use MockArg.Any<T>() as a whole argument, or state the exact value the argument must have."],
+            };
         }
 
         object? value = Expression.Lambda(argument).Compile().DynamicInvoke();

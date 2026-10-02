@@ -1,4 +1,5 @@
 using System;
+using TestFramework.Core.Steps;
 
 namespace TestFramework.Mock;
 
@@ -21,5 +22,5 @@ public abstract class MockDefinitionGeneric
     /// <summary>
     /// One run's live double, untyped.
     /// </summary>
-    internal abstract MockInstanceGeneric CreateInstanceGeneric();
+    internal abstract MockInstanceGeneric CreateInstanceGeneric(RunContext context);
 }

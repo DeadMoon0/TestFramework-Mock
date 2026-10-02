@@ -28,9 +28,4 @@ public abstract class MockInstanceGeneric
     /// reference re-resolves through.
     /// </summary>
     internal abstract bool TryGetLatestPublish(string identity, out object? payload);
-
-    /// <summary>
-    /// Closes the double with its run.
-    /// </summary>
-    internal abstract void FreezeForRunEnd();
 }

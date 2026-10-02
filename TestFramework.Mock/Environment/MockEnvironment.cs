@@ -66,16 +66,20 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
             if (this._sealed)
             {
                 throw new FrameworkConfigurationException(
-                    $"'{typeof(TPack).Name}' was included after a run had already used this environment.",
-                    recoverySteps: ["Include every pack while building the environment, before the first run is set up with it."],
-                    availableOptions: [.. this._packTypeByService.Values.Select(type => type.Name)]);
+                    $"'{typeof(TPack).Name}' was included after a run had already used this environment.")
+                {
+                    RecoverySteps = ["Include every pack while building the environment, before the first run is set up with it."],
+                    AvailableOptions = [.. this._packTypeByService.Values.Select(type => type.Name)],
+                };
             }
 
             if (existing is not null)
             {
                 throw new FrameworkConfigurationException(
-                    $"Two packs replace '{serviceType.Name}': '{existing.Name}' and '{typeof(TPack).Name}'.",
-                    recoverySteps: ["Keep one pack per service; merge the setups into one definition if both behaviours are meant."]);
+                    $"Two packs replace '{serviceType.Name}': '{existing.Name}' and '{typeof(TPack).Name}'.")
+                {
+                    RecoverySteps = ["Keep one pack per service; merge the setups into one definition if both behaviours are meant."],
+                };
             }
 
             this._packTypeByService[serviceType] = typeof(TPack);
@@ -143,7 +147,7 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
 
                 foreach (string name in serviceTypes.Select(MockHost.ResourceName).Distinct(StringComparer.Ordinal).OrderBy(static name => name, StringComparer.Ordinal))
                 {
-                    yield return new DeclaredResource(MockResourceKinds.HostKind, name, new Dictionary<ValueKey, string>(), $"mock host service '{name}'");
+                    yield return new DeclaredResource { Kind = MockResourceKinds.HostKind, Identifier = name, Values = new Dictionary<ValueKey, string>(), DeclaredBy = $"mock host service '{name}'" };
                 }
             }
         }

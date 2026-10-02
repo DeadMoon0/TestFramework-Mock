@@ -38,7 +38,7 @@ internal sealed class MockHostEnvComponent : EnvComponent
         Dictionary<Type, MockInstanceGeneric> instances = [];
         foreach (MockDefinitionGeneric pack in this._owner.CreatePacksForRun())
         {
-            MockInstanceGeneric instance = pack.CreateInstanceGeneric();
+            MockInstanceGeneric instance = pack.CreateInstanceGeneric(context);
             string service = instance.ServiceType.FullName ?? instance.ServiceType.Name;
 
             foreach (object? key in ReplaceEveryRegistration(services, instance.ServiceType, instance.ProxyObject))
@@ -58,8 +58,10 @@ internal sealed class MockHostEnvComponent : EnvComponent
         {
             provider.Dispose();
             throw new FrameworkStateException(
-                "This run already holds a mock host; a run hosts one composition.",
-                recoverySteps: ["Set one MockEnvironment per run; two compositions are two runs."]);
+                "This run already holds a mock host; a run hosts one composition.")
+            {
+                RecoverySteps = ["Set one MockEnvironment per run; two compositions are two runs."],
+            };
         }
 
         return Task.FromResult<object?>(state);
@@ -72,19 +74,11 @@ internal sealed class MockHostEnvComponent : EnvComponent
             return;
         }
 
-        // Dispose first, freeze after. Disposing is how the system under test stops its own
-        // background work - a timer, a flush on dispose - and while it does so the doubles still
-        // answer and record. Only what outlives disposal meets a frozen double, and a refusal thrown
-        // on a background thread nobody observes can take the whole test process down, so the window
-        // in which that can happen is kept as small as the system under test allows.
-        try
-        {
-            await host.DisposeProviderAsync();
-        }
-        finally
-        {
-            host.FreezeForRunEnd();
-        }
+        // Disposing is how the system under test stops its own background work - a timer, a flush on
+        // dispose - and while it does so the doubles still answer and record. Their records finish with the
+        // run, not here: they are the run's records, so a run whose teardown never reached this point still
+        // closes them.
+        await host.DisposeProviderAsync();
     }
 
     /// <summary>

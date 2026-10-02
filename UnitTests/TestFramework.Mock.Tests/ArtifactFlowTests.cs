@@ -125,17 +125,6 @@ public class ArtifactFlowTests
         Assert.Equal("old.txt", Published(mock, "deletedFile"));
     }
 
-    [Fact]
-    public void AFrozenRecord_RefusesAPublish()
-    {
-        MockArtifactRecord record = new();
-        MockArtifacts artifacts = new(record);
-
-        record.FreezeForRunEnd();
-
-        Assert.Throws<FrameworkStateException>(() => artifacts.Publish("late", null));
-    }
-
     private static object? Published(MockInstance<IFileStore> mock, string identity)
     {
         Assert.True(mock.TryGetLatestPublish(identity, out object? payload), $"nothing was published as '{identity}'");

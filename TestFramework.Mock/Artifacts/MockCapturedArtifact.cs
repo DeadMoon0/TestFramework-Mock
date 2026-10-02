@@ -41,8 +41,10 @@ public class MockCapturedArtifactDescriber
     public override Task Setup(RunContext context, MockCapturedArtifactData data, MockCapturedArtifactReference reference)
     {
         throw new FrameworkConfigurationException(
-            "A captured mock artifact is not set up by the run; it comes into being when the double is called.",
-            recoverySteps: ["Publish it from a setup body or ProducesArtifact, then bring it into the run with FindArtifact(identity, new MockArtifactFinder(identity))."]);
+            "A captured mock artifact is not set up by the run; it comes into being when the double is called.")
+        {
+            RecoverySteps = ["Publish it from a setup body or ProducesArtifact, then bring it into the run with FindArtifact(identity, new MockArtifactFinder(identity))."],
+        };
     }
 
     /// <inheritdoc />

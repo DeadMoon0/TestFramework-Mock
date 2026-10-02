@@ -130,7 +130,9 @@ public sealed class MockHostCallTrigger<TService, TResult> : Step<MockCallResult
         }
 
         throw new FrameworkConfigurationException(
-            $"The hosted call yields {MockValueText.DescribeType(typeof(TResult))}, which Host would not await; the step would pass while the call is still running.",
-            recoverySteps: ["Return a Task or Task<T> from the call so Host awaits it — for a ValueTask, call .AsTask()."]);
+            $"The hosted call yields {MockValueText.DescribeType(typeof(TResult))}, which Host would not await; the step would pass while the call is still running.")
+        {
+            RecoverySteps = ["Return a Task or Task<T> from the call so Host awaits it — for a ValueTask, call .AsTask()."],
+        };
     }
 }

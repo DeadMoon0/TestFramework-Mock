@@ -57,15 +57,19 @@ public sealed class MockBuilder<TService>
             if (setup.Pattern.Method.ReturnType != typeof(void) && !setup.HasResponse)
             {
                 throw new FrameworkConfigurationException(
-                    $"'{setup.Pattern.Describe()}' returns {setup.Pattern.Method.ReturnType.Name} but states no result.",
-                    recoverySteps: ["State Returns(...), Compute(...) or Throws(...) on the setup — or ReturnsAsync, Completes or ThrowsAsync for an async method. A mocked call never invents a return value."]);
+                    $"'{setup.Pattern.Describe()}' returns {setup.Pattern.Method.ReturnType.Name} but states no result.")
+                {
+                    RecoverySteps = ["State Returns(...), Compute(...) or Throws(...) on the setup — or ReturnsAsync, Completes or ThrowsAsync for an async method. A mocked call never invents a return value."],
+                };
             }
 
             if (setup.DeclaresUnreachableArtifacts)
             {
                 throw new FrameworkConfigurationException(
-                    $"'{setup.Pattern.Describe()}' always fails but declares ProducesArtifact; the artifact could never be published.",
-                    recoverySteps: ["Publish it by hand from a Compute body before throwing, or drop the declaration."]);
+                    $"'{setup.Pattern.Describe()}' always fails but declares ProducesArtifact; the artifact could never be published.")
+                {
+                    RecoverySteps = ["Publish it by hand from a Compute body before throwing, or drop the declaration."],
+                };
             }
         }
 
@@ -82,8 +86,10 @@ public sealed class MockBuilder<TService>
         if (this._built)
         {
             throw new FrameworkStateException(
-                $"A setup for {typeof(TService).Name} was declared after its double was built; it would never answer a call.",
-                recoverySteps: ["Declare every setup inside Configure, and do not keep the builder beyond it."]);
+                $"A setup for {typeof(TService).Name} was declared after its double was built; it would never answer a call.")
+            {
+                RecoverySteps = ["Declare every setup inside Configure, and do not keep the builder beyond it."],
+            };
         }
     }
 }

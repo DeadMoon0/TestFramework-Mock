@@ -35,7 +35,7 @@ public class AsyncHostTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((AsyncReportService service) => service.SaveAsync("report.txt"))).Name("save")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("save"));
@@ -49,7 +49,7 @@ public class AsyncHostTests(ITestOutputHelper output)
             .Trigger(MockExt.Host(async (AsyncReportService service) => { await service.TouchAsync("touched.txt"); })).Name("touch")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.CreateFile("touched.txt")));
@@ -62,7 +62,7 @@ public class AsyncHostTests(ITestOutputHelper output)
             .Trigger(MockExt.Host((AsyncReportService service) => service.FailAsync())).Name("fail")
             .Build();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(CreateEnvironment()).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         StepResultGeneric result = run.Step("fail").LastResult;
         Assert.Equal(StepState.Error, result.State);

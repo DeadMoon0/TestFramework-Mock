@@ -105,7 +105,7 @@ public class AritiesTests(ITestOutputHelper output)
             services.AddSingleton<ReportService>();
         }).Include<FileStorePack>();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("save"));
@@ -128,7 +128,7 @@ public class AritiesTests(ITestOutputHelper output)
             services.AddSingleton<AsyncReportService>();
         }).Include<FileStorePack>();
 
-        TimelineRun run = await timeline.SetupRun(null, output).SetEnv(environment).RunAsync();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("save"));
