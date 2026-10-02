@@ -101,4 +101,56 @@ public class AsyncSetupTests
         Assert.True(mock.TryGetLatestPublish("sent", out object? payload));
         Assert.Equal("mail", payload);
     }
+
+    [Fact]
+    public async Task AProducerThatThrowsAfterAPendingTask_FailsTheCallersAwait()
+    {
+        // Damage without it: for a call whose task was still running, the producer ran in a detached
+        // continuation, so its exception went nowhere - while the same producer on a synchronous call failed
+        // the call loudly. One setup, two behaviours, decided by timing.
+        TaskCompletionSource<int> pending = new();
+        MockInstance<IAsyncSink> mock = new InlinePack<IAsyncSink>(m =>
+            m.Call(s => s.GetAsync())
+                .Returns(pending.Task)
+                .ProducesArtifact(() => throw new InvalidOperationException("the producer failed"))).Create();
+
+        Task<int> get = mock.Object.GetAsync();
+        pending.SetResult(7);
+
+        InvalidOperationException thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => get);
+        Assert.Equal("the producer failed", thrown.Message);
+    }
+
+    [Fact]
+    public async Task APendingTasksValue_StillReachesTheCaller_AfterTheProducersRan()
+    {
+        TaskCompletionSource<int> pending = new();
+        MockInstance<IAsyncSink> mock = new InlinePack<IAsyncSink>(m =>
+            m.Call(s => s.GetAsync())
+                .Returns(pending.Task)
+                .ProducesArtifact(() => new("got", 1))).Create();
+
+        Task<int> get = mock.Object.GetAsync();
+        pending.SetResult(7);
+
+        Assert.Equal(7, await get);
+        Assert.True(mock.TryGetLatestPublish("got", out _));
+    }
+
+    [Fact]
+    public async Task ACancelledPendingTask_CancelsTheCall_AndProducesNothing()
+    {
+        TaskCompletionSource pending = new();
+        MockInstance<IAsyncSink> mock = new InlinePack<IAsyncSink>(m =>
+            m.Call(s => s.SendAsync(MockArg.Any<string>()))
+                .Returns(pending.Task)
+                .ProducesArtifact((string what) => new("sent", what))).Create();
+
+        Task send = mock.Object.SendAsync("mail");
+        pending.SetCanceled();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => send);
+        Assert.True(send.IsCanceled);
+        Assert.False(mock.TryGetLatestPublish("sent", out _));
+    }
 }

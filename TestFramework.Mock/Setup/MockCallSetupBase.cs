@@ -22,9 +22,13 @@ public abstract class MockCallSetupBase
     private Func<object?[], MockArtifacts, object?>? _response;
     private volatile bool _sealed;
 
+    // How a still-running task is followed by the producers, decided once from the method's return type.
+    private readonly Func<Task, Action, Task> _thenProduce;
+
     private protected MockCallSetupBase(CallPattern pattern)
     {
         this.Pattern = pattern;
+        this._thenProduce = ThenProduceFor(pattern.Method.ReturnType);
     }
 
     internal CallPattern Pattern { get; }
@@ -56,7 +60,7 @@ public abstract class MockCallSetupBase
         object? result = this._response is null ? null : this._response(arguments, artifacts);
         if (this._artifactProducers.Count > 0)
         {
-            this.ProduceWhenCompleted(result, () => this.RunProducers(arguments, artifacts));
+            result = this.ProduceWhenCompleted(result, () => this.RunProducers(arguments, artifacts));
         }
 
         return result;
@@ -86,7 +90,15 @@ public abstract class MockCallSetupBase
     /// awaits it continues. A pending <see cref="ValueTask"/> cannot be observed without consuming
     /// what the system under test is about to await, so it is treated as completed.
     /// </summary>
-    private void ProduceWhenCompleted(object? result, Action produce)
+    /// <remarks>
+    /// A pending task is handed back wrapped: the caller awaits a task that finishes once the producers
+    /// have run, with the call's own value, failure or cancellation. A producer that throws then fails the
+    /// caller's await, exactly as it fails a synchronous call. It used to run in a detached continuation, so
+    /// the same setup failed loudly or not at all depending on whether the dependency's task had finished
+    /// by the time it returned.
+    /// </remarks>
+    /// <returns>What the double hands back: the result itself, or the wrapper around a pending task.</returns>
+    private object? ProduceWhenCompleted(object? result, Action produce)
     {
         switch (result)
         {
@@ -96,28 +108,110 @@ public abstract class MockCallSetupBase
                     produce();
                 }
 
-                break;
+                return result;
             case Task pending:
-                pending.ContinueWith(
-                    _ => produce(),
-                    CancellationToken.None,
-                    TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-                break;
+                return this._thenProduce(pending, produce);
             case ValueTask { IsCompleted: true } finished:
                 if (finished.IsCompletedSuccessfully)
                 {
                     produce();
                 }
 
-                break;
+                return result;
             default:
                 if (result is null || !IsFailedValueTaskOfT(result))
                 {
                     produce();
                 }
 
-                break;
+                return result;
+        }
+    }
+
+    private static Func<Task, Action, Task> ThenProduceFor(Type returnType)
+    {
+        if (!returnType.IsGenericType || returnType.GetGenericTypeDefinition() != typeof(Task<>))
+        {
+            return ThenProduce;
+        }
+
+        return typeof(MockCallSetupBase)
+            .GetMethod(nameof(ThenProduceWithValue), BindingFlags.NonPublic | BindingFlags.Static)!
+            .MakeGenericMethod(returnType.GetGenericArguments()[0])
+            .CreateDelegate<Func<Task, Action, Task>>();
+    }
+
+    // A continuation that runs on the thread finishing the dependency's task, not an await: an await is not
+    // inlined under a synchronisation context - a test runner installs one - so the producers would run after
+    // whoever awaits the call has already moved on, instead of before.
+    private static Task ThenProduce(Task call, Action produce)
+    {
+        TaskCompletionSource done = new();
+        call.ContinueWith(
+            finished => Settle(finished, done.TrySetCanceled, done.TrySetException, () =>
+            {
+                produce();
+                done.TrySetResult();
+            }),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        return done.Task;
+    }
+
+    private static Task ThenProduceWithValue<T>(Task call, Action produce)
+    {
+        TaskCompletionSource<T> done = new();
+        call.ContinueWith(
+            finished => Settle(finished, done.TrySetCanceled, done.TrySetException, () =>
+            {
+                T value = ((Task<T>)finished).Result;
+                produce();
+                done.TrySetResult(value);
+            }),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        return done.Task;
+    }
+
+    /// <summary>
+    /// Passes the call's own outcome on, and runs the producers only for a call that succeeded; a producer that
+    /// throws fails the wrapper with its own exception.
+    /// </summary>
+    private static void Settle(
+        Task finished,
+        Func<CancellationToken, bool> cancel,
+        Func<IEnumerable<Exception>, bool> fail,
+        Action succeed)
+    {
+        if (finished.IsCanceled)
+        {
+            try
+            {
+                finished.GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException cancelled)
+            {
+                cancel(cancelled.CancellationToken);
+            }
+
+            return;
+        }
+
+        if (finished.IsFaulted)
+        {
+            fail(finished.Exception!.InnerExceptions);
+            return;
+        }
+
+        try
+        {
+            succeed();
+        }
+        catch (Exception exception)
+        {
+            fail([exception]);
         }
     }
 
