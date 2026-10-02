@@ -19,16 +19,22 @@ namespace TestFramework.Mock;
 public abstract class MockCallSetupBase
 {
     private readonly List<Action<object?[], MockArtifacts>> _artifactProducers = [];
+    private readonly SortedDictionary<int, Func<object?[], object?>> _assignments = [];
     private Func<object?[], MockArtifacts, object?>? _response;
     private volatile bool _sealed;
 
     // How a still-running task is followed by the producers, decided once from the method's return type.
     private readonly Func<Task, Action, Task> _thenProduce;
 
+    // The positions of the parameters a call brings a value for: every one but the out parameters. These are
+    // "the call's arguments" every typed lambda receives - an out position has nothing to hand it.
+    private readonly int[] _incoming;
+
     private protected MockCallSetupBase(CallPattern pattern)
     {
         this.Pattern = pattern;
         this._thenProduce = ThenProduceFor(pattern.Method.ReturnType);
+        this._incoming = [.. pattern.Method.GetParameters().Where(static parameter => !parameter.IsOut).Select(static parameter => parameter.Position)];
     }
 
     internal CallPattern Pattern { get; }
@@ -38,9 +44,28 @@ public abstract class MockCallSetupBase
     internal bool DeclaresUnreachableArtifacts => this.AlwaysFails && this._artifactProducers.Count > 0;
 
     /// <summary>
+    /// Whether the setup states a write-back that no call can reach, because every call throws.
+    /// </summary>
+    internal bool DeclaresUnreachableAssignments => this.ThrowsAtCall && this._assignments.Count > 0;
+
+    /// <summary>
+    /// The out parameters a call that returns would leave unset - a value nobody stated. A call that throws
+    /// returns nothing, so it owes nothing.
+    /// </summary>
+    internal IEnumerable<ParameterInfo> UnassignedOutParameters => this.ThrowsAtCall
+        ? []
+        : this.Pattern.Method.GetParameters().Where(parameter => parameter.IsOut && !this._assignments.ContainsKey(parameter.Position));
+
+    /// <summary>
     /// Whether every call fails - by throwing, or by handing back a task that has already failed.
     /// </summary>
     private bool AlwaysFails { get; set; }
+
+    /// <summary>
+    /// Whether every call throws at the call itself, so it never returns - unlike a failed task, which a call
+    /// returns, and which still owes its out parameters.
+    /// </summary>
+    private bool ThrowsAtCall { get; set; }
 
     /// <summary>
     /// Closes the declaration once the double is built. A setup object can outlive <c>Configure</c> -
@@ -52,15 +77,32 @@ public abstract class MockCallSetupBase
         this._sealed = true;
     }
 
-    internal object? Invoke(object?[] arguments, MockArtifacts artifacts)
+    /// <summary>
+    /// Answers one matching call.
+    /// </summary>
+    /// <param name="arguments">The call's arguments by position, as the interceptor received them.</param>
+    /// <param name="artifacts">The double's artifact channel.</param>
+    /// <param name="writeBack">Writes a value into an out or ref position of the caller's call.</param>
+    /// <returns>What the call returns.</returns>
+    internal object? Invoke(object?[] arguments, MockArtifacts artifacts, Action<int, object?> writeBack)
     {
+        object?[] incoming = [.. this._incoming.Select(position => arguments[position])];
+
         // The result runs first: a declared artifact is what a completed call produced, so a
         // call that throws is never assumed to have produced it. What a body published by hand
-        // before throwing stands — those publishes happened.
-        object? result = this._response is null ? null : this._response(arguments, artifacts);
+        // before throwing stands — those publishes happened. The write-backs are computed before any
+        // of them land, so one that throws leaves the caller's variables as they were.
+        object? result = this._response is null ? null : this._response(incoming, artifacts);
+
+        List<KeyValuePair<int, object?>> values = [.. this._assignments.Select(assignment => KeyValuePair.Create(assignment.Key, assignment.Value(incoming)))];
+        foreach (KeyValuePair<int, object?> value in values)
+        {
+            writeBack(value.Key, value.Value);
+        }
+
         if (this._artifactProducers.Count > 0)
         {
-            result = this.ProduceWhenCompleted(result, () => this.RunProducers(arguments, artifacts));
+            result = this.ProduceWhenCompleted(result, () => this.RunProducers(incoming, artifacts));
         }
 
         return result;
@@ -70,7 +112,59 @@ public abstract class MockCallSetupBase
     {
         this.SetResponse((_, _) => throw exception);
         this.AlwaysFails = true;
+        this.ThrowsAtCall = true;
     }
+
+    /// <summary>
+    /// States what the call writes back into one of its out or ref parameters, checked against the mocked
+    /// method here, where the setup is declared.
+    /// </summary>
+    /// <param name="parameter">The parameter's name, as the method declares it.</param>
+    /// <param name="valueType">The type of the value stated for it.</param>
+    /// <param name="compute">The value, from the call's arguments.</param>
+    private protected void AddAssignment(string parameter, Type valueType, Func<object?[], object?> compute)
+    {
+        this.EnsureOpen();
+        ArgumentException.ThrowIfNullOrWhiteSpace(parameter);
+
+        ParameterInfo[] parameters = this.Pattern.Method.GetParameters();
+        ParameterInfo? target = parameters.FirstOrDefault(candidate => string.Equals(candidate.Name, parameter, StringComparison.Ordinal));
+        string[] writable = [.. parameters.Where(static candidate => candidate.ParameterType.IsByRef && !candidate.IsIn).Select(Describe)];
+
+        if (target is null || !target.ParameterType.IsByRef || target.IsIn)
+        {
+            throw new FrameworkConfigurationException(
+                target is null
+                    ? $"'{this.Pattern.Describe()}' has no parameter named '{parameter}' to write back into."
+                    : $"'{parameter}' on '{this.Pattern.Describe()}' is not an out or ref parameter, so a call cannot write anything back into it.")
+            {
+                RecoverySteps = ["Name one of the method's out or ref parameters, exactly as the method declares it."],
+                AvailableOptions = writable,
+            };
+        }
+
+        Type element = target.ParameterType.GetElementType()!;
+        if (!element.IsAssignableFrom(valueType))
+        {
+            throw new FrameworkConfigurationException(
+                $"'{parameter}' on '{this.Pattern.Describe()}' is {element.Name}, and the value stated for it is {valueType.Name}.")
+            {
+                RecoverySteps = [$"State a {element.Name} for '{parameter}'."],
+            };
+        }
+
+        if (!this._assignments.TryAdd(target.Position, compute))
+        {
+            throw new FrameworkConfigurationException(
+                $"'{parameter}' on '{this.Pattern.Describe()}' already has its value stated; a setup states it once.")
+            {
+                RecoverySteps = ["Keep one Assigns for this parameter - or add a second mock.Call(...) if two behaviours are meant."],
+            };
+        }
+    }
+
+    private static string Describe(ParameterInfo parameter)
+        => $"{(parameter.IsOut ? "out" : "ref")} {parameter.ParameterType.GetElementType()!.Name} {parameter.Name}";
 
     /// <summary>
     /// States a result that is always an already-failed task: the async form of <see cref="SetThrows"/>.
@@ -277,19 +371,24 @@ public abstract class MockCallSetupBase
     /// </summary>
     private protected void ValidateArgumentTypes(params Type[] lambdaArgumentTypes)
     {
-        ParameterInfo[] parameters = this.Pattern.Method.GetParameters();
+        // The arguments a call brings: an out parameter brings none, and a ref one brings its value, typed as
+        // the parameter without the ref.
+        ParameterInfo[] parameters = [.. this.Pattern.Method.GetParameters().Where(static parameter => !parameter.IsOut)];
         bool fits = parameters.Length == lambdaArgumentTypes.Length
-            && parameters.Zip(lambdaArgumentTypes).All(pair => pair.Second.IsAssignableFrom(pair.First.ParameterType));
+            && parameters.Zip(lambdaArgumentTypes).All(pair => pair.Second.IsAssignableFrom(ValueTypeOf(pair.First)));
         if (!fits)
         {
             throw new FrameworkConfigurationException(
                 $"The lambda on '{this.Pattern.Describe()}' takes ({string.Join(", ", lambdaArgumentTypes.Select(t => t.Name))}), which does not fit the method.")
             {
                 RecoverySteps = ["Match the lambda's parameters to the mocked method's signature."],
-                AvailableOptions = [.. parameters.Select(p => $"{p.ParameterType.Name} {p.Name}")],
+                AvailableOptions = [.. parameters.Select(p => $"{ValueTypeOf(p).Name} {p.Name}")],
             };
         }
     }
+
+    private static Type ValueTypeOf(ParameterInfo parameter)
+        => parameter.ParameterType.IsByRef ? parameter.ParameterType.GetElementType()! : parameter.ParameterType;
 
     private protected static T Argument<T>(object?[] arguments, int index)
     {

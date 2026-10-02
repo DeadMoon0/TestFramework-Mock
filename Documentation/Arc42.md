@@ -61,7 +61,7 @@ that leaves the process.
 - `MockArg`, `CallPattern`, `CallPatternParser`: read a `m => m.Method(...)` expression into a matcher per
   argument, evaluating plain values once at declaration time
 - `MockInstance<TService>`: one run's live double — the Castle proxy, the call recorder and the artifact
-  record; frozen with the run
+  record; its logs close with the run
 - `MockInterceptor`: the one interception path — record, match exactly one setup or refuse, answer
 - `MockEnvironment`, `MockHostEnvComponent`, `MockHostState`: compose the services, apply the packs,
   record them on the run's effective settings, and hold the provider in the run's state slot
@@ -92,10 +92,11 @@ that leaves the process.
 4. **Finding.** A `FindArtifact` step with a `MockArtifactFinder` asks the host for the identity. If a
    double recorded it, Core adds the artifact under the finding step's own context; `CaptureArtifactVersion`
    re-resolves the latest record into a new version.
-5. **Teardown.** The component disposes the provider first, so the system under test's own disposal —
-   a flush, a timer it stops — still reaches its doubles; then it freezes every double, and from then on
-   calls and publishes are refused by name. The finished run still exposes the frozen doubles for
-   verification.
+5. **Teardown.** The component disposes the provider, so the system under test's own disposal — a flush,
+   a timer it stops — still reaches its doubles. The doubles' call and artifact logs are Core run records,
+   so they close when the run finishes, not here: a run whose teardown never ran still closes them. A late
+   call is answered and dropped from the log, never thrown into the system under test. The finished run
+   still exposes the doubles for verification.
 
 ## 7. Deployment View
 
@@ -104,8 +105,9 @@ executed inside the test host process. There is no service deployment unit.
 
 ## 8. Cross-Cutting Concepts
 
-- **Freezing:** the call recorder and the artifact record freeze with the run, so a finished run is a
-  snapshot; the freeze is internal, so no caller can freeze a running double.
+- **Finishing:** the call recorder and the artifact record are Core `RunRecord`s, under the run's one write
+  gate, so they finish exactly when the run does and a finished run is a snapshot; nothing in Mock keeps a
+  "finished" flag of its own.
 - **Sealed declarations:** a pack's setups seal when its double is built, the environment seals when the
   first run uses it, and every run gets a fresh pack object, so nothing declared can change underneath a
   run that is using it.

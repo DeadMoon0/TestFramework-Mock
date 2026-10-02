@@ -78,8 +78,9 @@ Mock is an environment like any other. Three pieces, each with one job:
 
 A double never writes into the run. It records what a call left behind in its environment — the way a
 real dependency would leave a file or a row — and a timeline step brings that into the run with Core's
-`FindArtifact`, exactly as it would find a file another program wrote. After the run, the doubles are
-frozen: their call logs are a snapshot, and a late call is refused by name.
+`FindArtifact`, exactly as it would find a file another program wrote. When the run finishes, the doubles'
+logs close with it: they are a snapshot from then on, and a late call is answered but not recorded - the run's
+log says so - rather than thrown into the system under test.
 
 ## Writing A Mock-Pack
 
@@ -98,6 +99,7 @@ matches is refused naming them all. There is no precedence rule; narrow the matc
   expression such as `MockArg.Any<int>() + 1` it is refused, because it would be read once as a fixed value.
 - An exact value is evaluated once, when the pack is instantiated. Arrays and lists compare by their
   elements in order; everything else compares with `Equals`.
+- An `out` or `ref` position takes `MockArg.Ref<T>.Any` — see [Out And Ref Parameters](#out-and-ref-parameters).
 
 | Verb | Meaning |
 |---|---|
@@ -110,6 +112,8 @@ matches is refused naming them all. There is no precedence rule; narrow the matc
 | `Callback((a, b) => ...)` | a body for a void call; a void setup with no body simply does nothing |
 | `Compute((a, b, artifacts) => ...)` | the primitive: the result plus `artifacts.Publish(identity, payload)` by hand |
 | `ProducesArtifact((a, b) => new(identity, payload))` | records a payload when the call completes; stackable |
+| `Assigns("name", value)` | writes `value` into the out or ref parameter `name` when the call returns |
+| `Assigns("name", (a, b) => ...)` | the value computed from the call's typed arguments |
 
 The async verbs exist only on a setup for a task-returning method, so `ReturnsAsync` on a method returning
 `int` does not compile. Prefer `ThrowsAsync` over `Throws` for an async method: `Throws` raises the
@@ -124,7 +128,7 @@ The rules a pack is held to:
 - **Strict only.** A call no setup matches is recorded, then refused naming the call and listing the
   setups that exist.
 - **A value is never invented.** A setup for a method that returns something must state `Returns`,
-  `Compute` or `Throws`, and states it once.
+  `Compute` or `Throws`, and states it once. A setup must `Assigns` every `out` parameter, for the same reason.
 - **A declared artifact is what a completed call produced.** `ProducesArtifact` runs after the result,
   so a call that throws never publishes it. For an async call, completed means its task finished
   successfully: a task that later fails publishes nothing, and `ThrowsAsync` with `ProducesArtifact` is
@@ -135,6 +139,37 @@ The rules a pack is held to:
   `Configure` refuses further changes, so nothing can alter a double that is already answering calls.
 - **A fresh pack per run.** The environment creates a new pack object for every run, so a field on a pack
   never carries one run's state into the next.
+
+### Out And Ref Parameters
+
+C# allows only a variable after `out` or `ref`, and inside a setup expression only a field, so those
+positions take the placeholder `MockArg.Ref<T>.Any`; what the call writes back is stated with `Assigns`:
+
+```csharp
+mock.Call(s => s.TryGet("known", out MockArg.Ref<string>.Any))
+    .Returns(true)
+    .Assigns("value", "hello");
+
+mock.Call(s => s.TryGet(MockArg.Any<string>(), out MockArg.Ref<string>.Any))
+    .Returns(true)
+    .Assigns("value", (string key) => key.ToUpperInvariant());
+
+mock.Call(s => s.Bump(ref MockArg.Ref<int>.Any))
+    .Assigns("counter", (int counter) => counter + 1);
+```
+
+- An `out` parameter brings no value, so its position takes only the placeholder, and it is not one of the
+  call's arguments: typed lambdas receive every other parameter. A `ref` parameter arrives as its incoming
+  value; at its position the placeholder matches any value, and a variable matches the value it held when
+  the pack was instantiated.
+- `Assigns` names the parameter as the method declares it, and is checked when the pack is instantiated:
+  the name must be an `out` or `ref` parameter, the value must fit its type, and each is stated once.
+- Every `out` parameter must be assigned; a `ref` parameter nobody assigns keeps the caller's value.
+- The values are written when the call returns. A call that throws writes nothing back, and `Throws` with
+  `Assigns` on one setup is refused as unreachable. A task-returning method writes its `out` values as the
+  call returns, even when its task fails later.
+- `in` parameters are ordinary arguments.
+- A recorded call holds `null` at an `out` position: nothing arrived there.
 
 ## Hosting The System Under Test
 
@@ -160,8 +195,9 @@ run's double in each of those places, so nothing reaches the real dependency whi
 - The finished run records which pack stood where: `run.EffectiveSettings` holds kind `mock.host`, key =
   the service's full name — with `[key]` appended for each keyed registration it replaced — and value =
   the pack's type name.
-- At the end of the run the provider is disposed first and the doubles freeze after, so what the system
-  under test does while being disposed — a flush, stopping a timer — still reaches its doubles.
+- The provider is disposed in the run's teardown while the doubles still record, so what the system under
+  test does while being disposed — a flush, stopping a timer — still reaches its doubles. Their logs close
+  when the run finishes, not at teardown, so a run whose teardown never ran still closes them.
 - A run hosts one composition. Set the environment with `SetupRun(...).SetEnv(environment)`.
 
 ## Calling The System Under Test
@@ -261,9 +297,9 @@ service that is registered; register the system under test itself, not only its 
 
 **`The hosted call yields ValueTask<...>`** — return a `Task` so `Host` can await it.
 
-**`The run is finished; the mock no longer accepts calls`** — something in the system under test kept
-calling after the run ended, usually background work the test started. Make stopping it a step of the
-timeline.
+**A call is missing from `RecordedCalls`, and the run's log says a `mock calls` entry was not kept** — the
+system under test called a double after the run had finished, usually background work the test started. The
+double answered it; the finished log does not take it. Make stopping that work a step of the timeline.
 
 The full list, with when each one fires, is in
 [Documentation/ERROR-HANDLING-MOCK.md](https://github.com/DeadMoon0/TestFramework-Mock/blob/main/Documentation/ERROR-HANDLING-MOCK.md).

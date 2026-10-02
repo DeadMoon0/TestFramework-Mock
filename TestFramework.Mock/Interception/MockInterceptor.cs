@@ -32,7 +32,10 @@ internal sealed class MockInterceptor : IInterceptor
 
     public void Intercept(IInvocation invocation)
     {
-        object?[] arguments = [.. invocation.Arguments];
+        // An out position brings no value - whatever the caller's variable held is not an argument - so it is
+        // recorded and matched as null, and never handed to a setup's lambda.
+        ParameterInfo[] parameters = invocation.Method.GetParameters();
+        object?[] arguments = [.. invocation.Arguments.Select((argument, position) => parameters[position].IsOut ? null : argument)];
         List<MockCallSetupBase> matches =
             [.. this._setups.Where(setup => setup.Pattern.Matches(invocation.Method, arguments))];
         this._recorder.Record(invocation.Method, arguments, matched: matches.Count == 1);
@@ -57,7 +60,7 @@ internal sealed class MockInterceptor : IInterceptor
             };
         }
 
-        invocation.ReturnValue = matches[0].Invoke(arguments, this._artifacts);
+        invocation.ReturnValue = matches[0].Invoke(arguments, this._artifacts, invocation.SetArgumentValue);
     }
 
     private static string Describe(MethodInfo method, IReadOnlyList<object?> arguments)

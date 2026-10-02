@@ -69,7 +69,7 @@ Three rules shape everything else:
    match. A setup for a method that returns something must say what it returns.
 2. **Mock is an environment like any other.** A double records what a call left behind; a step brings it
    into the run with Core's `FindArtifact`, the way it would find a file another program wrote.
-3. **A finished run is a snapshot.** The doubles freeze with the run, and the run records which pack
+3. **A finished run is a snapshot.** The doubles' logs close with the run, and the run records which pack
    stood in for which service.
 
 ## Documentation Map

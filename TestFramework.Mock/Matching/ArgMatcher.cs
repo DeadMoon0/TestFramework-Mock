@@ -51,6 +51,29 @@ internal sealed class AnyMatcher : IArgMatcher
 /// sequence keeps reference equality, since enumerating it here would consume what the system under
 /// test passed.
 /// </summary>
+/// <summary>
+/// An out position: a call brings no value for it, so every call matches it.
+/// </summary>
+internal sealed class OutMatcher : IArgMatcher
+{
+    private readonly Type _elementType;
+
+    public OutMatcher(Type elementType)
+    {
+        this._elementType = elementType;
+    }
+
+    public bool Matches(object? value)
+    {
+        return true;
+    }
+
+    public string Describe()
+    {
+        return $"out {this._elementType.Name}";
+    }
+}
+
 internal sealed class ExactMatcher : IArgMatcher
 {
     private readonly object? _expected;

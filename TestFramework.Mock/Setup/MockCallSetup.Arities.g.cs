@@ -46,6 +46,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, TValue>(string parameter, Func<T1, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0)));
+        return this;
+    }
+
+    /// <summary>
     /// The result is computed from the call's arguments. The lambda's parameter types are checked
     /// against the mocked method where the setup is declared.
     /// </summary>
@@ -74,6 +86,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, TValue>(string parameter, Func<T1, T2, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1)));
         return this;
     }
 
@@ -110,6 +134,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, T3, TValue>(string parameter, Func<T1, T2, T3, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2)));
+        return this;
+    }
+
+    /// <summary>
     /// The result is computed from the call's arguments. The lambda's parameter types are checked
     /// against the mocked method where the setup is declared.
     /// </summary>
@@ -138,6 +174,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, T3, T4, TValue>(string parameter, Func<T1, T2, T3, T4, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3)));
         return this;
     }
 
@@ -174,6 +222,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, T3, T4, T5, TValue>(string parameter, Func<T1, T2, T3, T4, T5, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4)));
+        return this;
+    }
+
+    /// <summary>
     /// The result is computed from the call's arguments. The lambda's parameter types are checked
     /// against the mocked method where the setup is declared.
     /// </summary>
@@ -202,6 +262,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, T3, T4, T5, T6, TValue>(string parameter, Func<T1, T2, T3, T4, T5, T6, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5)));
         return this;
     }
 
@@ -238,6 +310,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, T3, T4, T5, T6, T7, TValue>(string parameter, Func<T1, T2, T3, T4, T5, T6, T7, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5), Argument<T7>(arguments, 6)));
+        return this;
+    }
+
+    /// <summary>
     /// The result is computed from the call's arguments. The lambda's parameter types are checked
     /// against the mocked method where the setup is declared.
     /// </summary>
@@ -266,6 +350,18 @@ public sealed partial class MockCallSetup<TService, TResult>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5), Argument<T7>(arguments, 6), Argument<T8>(arguments, 7))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<T1, T2, T3, T4, T5, T6, T7, T8, TValue>(string parameter, Func<T1, T2, T3, T4, T5, T6, T7, T8, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5), Argument<T7>(arguments, 6), Argument<T8>(arguments, 7)));
         return this;
     }
 
@@ -314,6 +410,18 @@ public sealed partial class MockCallSetup<TService>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, TValue>(string parameter, Func<T1, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0)));
+        return this;
+    }
+
+    /// <summary>
     /// Runs on every matching call, with the call's arguments.
     /// </summary>
     public MockCallSetup<TService> Callback<T1, T2>(Action<T1, T2> action)
@@ -349,6 +457,18 @@ public sealed partial class MockCallSetup<TService>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, TValue>(string parameter, Func<T1, T2, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1)));
         return this;
     }
 
@@ -392,6 +512,18 @@ public sealed partial class MockCallSetup<TService>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, T3, TValue>(string parameter, Func<T1, T2, T3, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2)));
+        return this;
+    }
+
+    /// <summary>
     /// Runs on every matching call, with the call's arguments.
     /// </summary>
     public MockCallSetup<TService> Callback<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
@@ -427,6 +559,18 @@ public sealed partial class MockCallSetup<TService>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, T3, T4, TValue>(string parameter, Func<T1, T2, T3, T4, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3)));
         return this;
     }
 
@@ -470,6 +614,18 @@ public sealed partial class MockCallSetup<TService>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, T3, T4, T5, TValue>(string parameter, Func<T1, T2, T3, T4, T5, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4)));
+        return this;
+    }
+
+    /// <summary>
     /// Runs on every matching call, with the call's arguments.
     /// </summary>
     public MockCallSetup<TService> Callback<T1, T2, T3, T4, T5, T6>(Action<T1, T2, T3, T4, T5, T6> action)
@@ -505,6 +661,18 @@ public sealed partial class MockCallSetup<TService>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, T3, T4, T5, T6, TValue>(string parameter, Func<T1, T2, T3, T4, T5, T6, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5)));
         return this;
     }
 
@@ -548,6 +716,18 @@ public sealed partial class MockCallSetup<TService>
     }
 
     /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, T3, T4, T5, T6, T7, TValue>(string parameter, Func<T1, T2, T3, T4, T5, T6, T7, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5), Argument<T7>(arguments, 6)));
+        return this;
+    }
+
+    /// <summary>
     /// Runs on every matching call, with the call's arguments.
     /// </summary>
     public MockCallSetup<TService> Callback<T1, T2, T3, T4, T5, T6, T7, T8>(Action<T1, T2, T3, T4, T5, T6, T7, T8> action)
@@ -583,6 +763,18 @@ public sealed partial class MockCallSetup<TService>
     {
         this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5), Argument<T7>(arguments, 6), Argument<T8>(arguments, 7))));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<T1, T2, T3, T4, T5, T6, T7, T8, TValue>(string parameter, Func<T1, T2, T3, T4, T5, T6, T7, T8, TValue> compute)
+    {
+        this.ValidateArgumentTypes(typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(Argument<T1>(arguments, 0), Argument<T2>(arguments, 1), Argument<T3>(arguments, 2), Argument<T4>(arguments, 3), Argument<T5>(arguments, 4), Argument<T6>(arguments, 5), Argument<T7>(arguments, 6), Argument<T8>(arguments, 7)));
         return this;
     }
 

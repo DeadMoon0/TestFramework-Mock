@@ -36,6 +36,20 @@ public interface IValueSink
 }
 
 /// <summary>
+/// A dependency with out, ref and in parameters, for the by-ref tests.
+/// </summary>
+public interface IKeyStore
+{
+    bool TryGet(string key, out string value);
+
+    void Bump(ref int counter);
+
+    Task<bool> TryGetAsync(string key, out string value);
+
+    int Double(in int value);
+}
+
+/// <summary>
 /// The four task shapes an async dependency returns.
 /// </summary>
 public interface IAsyncSink

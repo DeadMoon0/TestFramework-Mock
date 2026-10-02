@@ -58,6 +58,18 @@ public sealed partial class MockCallSetup<TService, TResult>
         return this;
     }
 
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService, TResult> Assigns<<#= Types(n) #>, TValue>(string parameter, Func<<#= Types(n) #>, TValue> compute)
+    {
+        this.ValidateArgumentTypes(<#= TypeOfs(n) #>);
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(<#= Args(n) #>));
+        return this;
+    }
+
 <# } #>
 }
 
@@ -101,6 +113,18 @@ public sealed partial class MockCallSetup<TService>
     {
         this.ValidateArgumentTypes(<#= TypeOfs(n) #>);
         this.AddArtifactProducer((arguments, artifacts) => artifacts.Publish(produce(<#= Args(n) #>)));
+        return this;
+    }
+
+    /// <summary>
+    /// Every matching call that returns writes a value computed from its arguments into the out or ref
+    /// parameter <paramref name="parameter"/>. A ref parameter arrives as its incoming value; an out
+    /// parameter is not one of the call's arguments.
+    /// </summary>
+    public MockCallSetup<TService> Assigns<<#= Types(n) #>, TValue>(string parameter, Func<<#= Types(n) #>, TValue> compute)
+    {
+        this.ValidateArgumentTypes(<#= TypeOfs(n) #>);
+        this.AddAssignment(parameter, typeof(TValue), arguments => compute(<#= Args(n) #>));
         return this;
     }
 

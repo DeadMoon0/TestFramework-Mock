@@ -18,7 +18,7 @@
     MockExt.Host resolves the system under test from the host and calls it; the hosted service arrives behind the call's own arguments, which can be bound from run variables.
     A double never writes into the run. ProducesArtifact and Publish record a payload under an identity in the environment; a timeline brings it in with FindArtifact(identity, new MockArtifactFinder(identity)) and takes later looks with CaptureArtifactVersion(identity).
     Doubles are strict: an unmatched call and a call two setups match are both refused by name. There is no precedence between setups.
-    The finished run is a snapshot: doubles are frozen, and EffectiveSettings records which pack stood in for which service.
+    The finished run is a snapshot: the doubles' logs close with the run, and EffectiveSettings records which pack stood in for which service.
 </key_concepts>
 
 <best_practices>
@@ -35,7 +35,8 @@
     Important APIs and shapes:
     - class XPack : MockDefinition<IService> { protected override void Configure(MockBuilder<IService> mock) { ... } }
     - mock.Call(s => s.Method(MockArg.Any<string>(), "exact")) for value-returning and void calls
-    - setup verbs: Returns(value), Returns((a, b) => ...), Throws(exception), Callback((a, b) => ...), Compute((a, b, artifacts) => ...), ProducesArtifact((a, b) => new(identity, payload))
+    - setup verbs: Returns(value), Returns((a, b) => ...), Throws(exception), Callback((a, b) => ...), Compute((a, b, artifacts) => ...), ProducesArtifact((a, b) => new(identity, payload)), Assigns("name", value), Assigns("name", (a, b) => ...)
+    - out and ref positions take MockArg.Ref<T>.Any: mock.Call(s => s.TryGet("key", out MockArg.Ref<string>.Any)).Returns(true).Assigns("value", "hello")
     - async setup verbs, only on task-returning methods: ReturnsAsync(value), Completes(), ThrowsAsync(exception)
     - artifacts.Publish(identity, payload) inside a Compute body
     - MockEnvironment.For(services => ...).Include<XPack>()
@@ -57,6 +58,7 @@
     - Packs are instantiated when the run's environment starts, so every pack mistake fails the run before its first step.
     - Typed setup lambdas are checked against the mocked method's parameters at instantiation, naming the real signature.
     - A value-returning setup must state Returns, Compute or Throws; a mocked call never invents a return value.
+    - Every out parameter must be assigned with Assigns; a ref parameter nobody assigns keeps the caller's value. Typed lambdas receive every parameter except out ones. Values are written when the call returns; a call that throws writes nothing back.
     - ProducesArtifact runs after the result, so a call that throws never publishes it; Throws plus ProducesArtifact on one setup is refused.
     - Host awaits Task and Task<T>; any other awaitable (ValueTask, a task of a task) is refused when the timeline is built.
     - Every Host call runs in its own DI scope: scoped services are fresh per call and disposed when it ends; singletons are shared across the run.
@@ -64,7 +66,7 @@
     - A later publish of an identity replaces the earlier one in the environment; a version in the run is a look the timeline took, not one per call.
     - A finder whose identity nothing has published yet finds nothing and logs a warning; two doubles publishing one identity are refused naming both.
     - Call refusals are thrown into the system under test; a system that swallows exceptions can hide them, but the call log still records the call with Matched = false.
-    - Teardown disposes the provider first, then freezes every double; calls made during disposal still reach the doubles, later calls and publishes are refused by name.
+    - Teardown disposes the provider while the doubles still record; their logs close when the run finishes. A call after that is answered but not recorded, and the run's log says so - never thrown into the system under test.
     - Setups seal when the double is built, the environment seals when the first run uses it, and every run gets a fresh pack object.
     - MockArg.Any<T>() is type-checked and only valid as a whole argument; arrays and lists compare by content.
     - Keyed registrations of a replaced service are replaced too.
@@ -131,7 +133,7 @@
     - MockExt: the timeline verbs; Host(...)
     - MockHostCallTrigger<TService, TResult> / MockHostCallTrigger<TService>: the steps behind Host
     - MockArtifactFinder: finds a published identity for FindArtifact
-    - MockInstance<TService>: a run's frozen double; CountCalls, RecordedCalls
+    - MockInstance<TService>: a run's double, its logs closed with the run; CountCalls, RecordedCalls
     - MockRunExtensions: Mock<T>(), MockResult<T>(label), GetMockArtifact(identifier)
 
     Discovery heuristics for the agent:

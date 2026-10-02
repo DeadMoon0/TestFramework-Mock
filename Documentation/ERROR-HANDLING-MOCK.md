@@ -15,6 +15,10 @@ it without re-running the test.
 | building the environment | a pack included after a run has already used the environment | `FrameworkConfigurationException` |
 | the run's environment starts | a setup is not a single direct method call on the service | `FrameworkConfigurationException` |
 | the run's environment starts | `MockArg` used inside a larger argument expression | `FrameworkConfigurationException` |
+| the run's environment starts | an `out` position holds anything but `MockArg.Ref<T>.Any`, or the placeholder stands outside an `out` or `ref` position | `FrameworkConfigurationException` |
+| the run's environment starts | a setup leaves an `out` parameter unassigned | `FrameworkConfigurationException` |
+| the run's environment starts | `Assigns` names no `out` or `ref` parameter, states a value of the wrong type, or states one twice | `FrameworkConfigurationException` |
+| the run's environment starts | `Throws` together with `Assigns` on one setup | `FrameworkConfigurationException` |
 | the run's environment starts | a typed lambda does not fit the mocked method | `FrameworkConfigurationException` |
 | the run's environment starts | a setup states its result twice | `FrameworkConfigurationException` |
 | the run's environment starts | a value-returning setup states no result | `FrameworkConfigurationException` |
@@ -25,7 +29,7 @@ it without re-running the test.
 | planning the run | a `Host` step's service is declared by nothing — no `SetEnv(MockEnvironment...)`, or not registered in the composition | `FrameworkConfigurationException` (from Core, listing what is registered) |
 | the system under test calls a double | no setup matches the call | `FrameworkConfigurationException` |
 | the system under test calls a double | more than one setup matches the call | `FrameworkConfigurationException` |
-| the system under test calls a double | the run has already finished | `FrameworkStateException` |
+| the system under test calls a double | the run has already finished | none: the double answers, the call is not recorded, and the run's log says so |
 | a find or a later look | two doubles published the same identity | `FrameworkConfigurationException` |
 | reading the finished run | `run.Mock<T>()` for a service no pack replaced | `FrameworkConfigurationException` |
 | reading the finished run | `run.MockResult<T>(label)` with a type the step did not return | `FrameworkConfigurationException` |
@@ -38,7 +42,7 @@ first step — never halfway through.
 
 ## Refusals Inside The System Under Test
 
-A call refusal — no match, two matches, a finished run — is thrown **into the system under test**, from
+A call refusal — no match, two matches — is thrown **into the system under test**, from
 inside the call it made. Normally it propagates out through the `Host` step and fails it with the message
 below. A system under test that catches every exception can swallow it; the call is still recorded, with
 `Matched` false, so check `run.Mock<T>().RecordedCalls` when a step passes but behaves unexpectedly.
@@ -60,9 +64,10 @@ Available:
 **More than one setup matches.** Lists exactly the overlapping setups. There is no precedence rule to fall
 back on — narrow the matchers so one answers.
 
-**The run is finished.** Something kept calling a double after its run ended. The provider is disposed
-before the doubles freeze, so a system under test that stops its work when disposed never meets this; what
-does is background work that outlives disposal. Make stopping it a step of the timeline.
+**A call after the run finished is not a refusal.** The double answers it, and the call is left out of the
+finished log, which the run's own log reports. A refusal thrown there would land on a background thread of
+the system under test, where nobody observes it and it can end the test process. What reaches this is
+background work that outlives disposal; make stopping it a step of the timeline.
 
 ## Pack Mistakes
 

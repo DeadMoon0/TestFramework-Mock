@@ -69,4 +69,20 @@ public sealed partial class MockCallSetup<TService> : MockCallSetupBase
         return this;
     }
 
+    /// <summary>
+    /// Every matching call that returns writes <paramref name="value"/> into its out or ref parameter
+    /// <paramref name="parameter"/>. Checked where the setup is declared: the name must be one of the method's
+    /// out or ref parameters, and the value must fit its type. Every out parameter needs one, because a double
+    /// never hands back a value nobody stated.
+    /// </summary>
+    /// <typeparam name="TValue">The value's type.</typeparam>
+    /// <param name="parameter">The out or ref parameter's name, as the method declares it.</param>
+    /// <param name="value">What the call writes back.</param>
+    /// <returns>This setup.</returns>
+    public MockCallSetup<TService> Assigns<TValue>(string parameter, TValue value)
+    {
+        this.AddAssignment(parameter, typeof(TValue), _ => value);
+        return this;
+    }
+
 }

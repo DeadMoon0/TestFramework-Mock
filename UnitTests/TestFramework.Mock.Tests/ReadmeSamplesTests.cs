@@ -158,4 +158,27 @@ public class ReadmeSamplesTests
         run.EnsureRanToCompletion();
         Assert.True(run.MockResult<bool>("register"));
     }
+
+    [Fact]
+    public void OutAndRefParameters_AsTheReadmeShowsThem()
+    {
+        MockInstance<Fixtures.IKeyStore> stated = new Fixtures.InlinePack<Fixtures.IKeyStore>(mock =>
+            mock.Call(s => s.TryGet("known", out MockArg.Ref<string>.Any))
+                .Returns(true)
+                .Assigns("value", "hello")).Create();
+        MockInstance<Fixtures.IKeyStore> computed = new Fixtures.InlinePack<Fixtures.IKeyStore>(mock =>
+            mock.Call(s => s.TryGet(MockArg.Any<string>(), out MockArg.Ref<string>.Any))
+                .Returns(true)
+                .Assigns("value", (string key) => key.ToUpperInvariant())).Create();
+        MockInstance<Fixtures.IKeyStore> bumping = new Fixtures.InlinePack<Fixtures.IKeyStore>(mock =>
+            mock.Call(s => s.Bump(ref MockArg.Ref<int>.Any))
+                .Assigns("counter", (int counter) => counter + 1)).Create();
+
+        stated.Object.TryGet("known", out string hello);
+        computed.Object.TryGet("abc", out string upper);
+        int counter = 1;
+        bumping.Object.Bump(ref counter);
+
+        Assert.Equal(("hello", "ABC", 2), (hello, upper, counter));
+    }
 }

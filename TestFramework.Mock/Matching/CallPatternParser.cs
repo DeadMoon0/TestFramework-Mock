@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -27,12 +28,47 @@ internal static class CallPatternParser
         }
 
         List<IArgMatcher> matchers = [];
-        foreach (Expression argument in methodCall.Arguments)
+        ParameterInfo[] parameters = methodCall.Method.GetParameters();
+        for (int index = 0; index < parameters.Length; index++)
         {
-            matchers.Add(ParseArgument(argument));
+            matchers.Add(parameters[index].ParameterType.IsByRef && !parameters[index].IsIn
+                ? ParseByRefArgument(methodCall.Arguments[index], parameters[index])
+                : ParseArgument(methodCall.Arguments[index]));
         }
 
         return new CallPattern(methodCall.Method, matchers);
+    }
+
+    /// <summary>
+    /// An <c>out</c> or <c>ref</c> position. An out argument brings no value, so it can only be the placeholder;
+    /// a ref argument brings one, so it is the placeholder (any value) or a variable whose current value it must
+    /// have, like any other exact argument.
+    /// </summary>
+    private static IArgMatcher ParseByRefArgument(Expression argument, ParameterInfo parameter)
+    {
+        Type element = parameter.ParameterType.GetElementType()!;
+
+        if (IsRefPlaceholder(argument))
+        {
+            return parameter.IsOut ? new OutMatcher(element) : new AnyMatcher(element);
+        }
+
+        if (parameter.IsOut)
+        {
+            throw new FrameworkConfigurationException(
+                $"'{parameter.Name}' is an out parameter, so a call brings no value for it to match; '{argument}' stands where only the placeholder can.")
+            {
+                RecoverySteps = [$"Write 'out MockArg.Ref<{element.Name}>.Any' in that position, and state what the call writes back with .Assigns(\"{parameter.Name}\", ...)."],
+            };
+        }
+
+        return new ExactMatcher(Expression.Lambda(Expression.Convert(argument, typeof(object))).Compile().DynamicInvoke());
+    }
+
+    private static bool IsRefPlaceholder(Expression argument)
+    {
+        return argument is MemberExpression { Member: FieldInfo { DeclaringType: { IsGenericType: true } declaring } }
+            && declaring.GetGenericTypeDefinition() == typeof(MockArg.Ref<>);
     }
 
     private static IArgMatcher ParseArgument(Expression argument)
@@ -48,6 +84,15 @@ internal static class CallPatternParser
         if (unwrapped is MethodCallExpression call && IsMatcher(call))
         {
             return new AnyMatcher(call.Method.GetGenericArguments()[0]);
+        }
+
+        if (IsRefPlaceholder(unwrapped))
+        {
+            throw new FrameworkConfigurationException(
+                $"MockArg.Ref<T>.Any stands in '{argument}', which is not an out or ref position; there it would be read as a fixed value.")
+            {
+                RecoverySteps = ["Use MockArg.Any<T>() for an ordinary argument; MockArg.Ref<T>.Any belongs only after out or ref."],
+            };
         }
 
         // Anywhere else, a matcher would be evaluated once like any other value and quietly become
@@ -85,6 +130,12 @@ internal static class CallPatternParser
         {
             this._found |= IsMatcher(node);
             return base.VisitMethodCall(node);
+        }
+
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            this._found |= IsRefPlaceholder(node);
+            return base.VisitMember(node);
         }
     }
 }

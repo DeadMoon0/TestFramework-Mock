@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 using TestFramework.Core.Exceptions;
@@ -60,6 +61,24 @@ public sealed class MockBuilder<TService>
                     $"'{setup.Pattern.Describe()}' returns {setup.Pattern.Method.ReturnType.Name} but states no result.")
                 {
                     RecoverySteps = ["State Returns(...), Compute(...) or Throws(...) on the setup — or ReturnsAsync, Completes or ThrowsAsync for an async method. A mocked call never invents a return value."],
+                };
+            }
+
+            if (setup.UnassignedOutParameters.FirstOrDefault() is { } unassigned)
+            {
+                throw new FrameworkConfigurationException(
+                    $"'{unassigned.Name}' is an out parameter of '{setup.Pattern.Describe()}', and the setup never assigns it; the caller would get a value nobody stated.")
+                {
+                    RecoverySteps = [$"State it with .Assigns(\"{unassigned.Name}\", value) on the setup, or compute it from the call's arguments."],
+                };
+            }
+
+            if (setup.DeclaresUnreachableAssignments)
+            {
+                throw new FrameworkConfigurationException(
+                    $"'{setup.Pattern.Describe()}' always throws but declares Assigns; a call that throws writes nothing back.")
+                {
+                    RecoverySteps = ["Drop the Assigns, or let the call return - ThrowsAsync returns a failed task and still writes back."],
                 };
             }
 
