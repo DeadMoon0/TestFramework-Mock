@@ -429,3 +429,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local, machine-specific settings. The example/template variants stay tracked.
+local.settings.json
+*.local.testsettings.json
+local.testsettings.json
+local.labsettings.json
+!example.local.testsettings.json
+!*.template.json
