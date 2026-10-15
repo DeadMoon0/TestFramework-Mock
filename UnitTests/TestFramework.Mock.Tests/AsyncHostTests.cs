@@ -32,7 +32,7 @@ public class AsyncHostTests(ITestOutputHelper output)
     public async Task ATaskOfT_IsAwaited_AndTheStepsResultIsWhatTheTaskYielded()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((AsyncReportService service) => service.SaveAsync("report.txt"))).Name("save")
+            .Trigger(MockExt.Host((AsyncReportService service) => service.SaveAsync("report.txt"))).Label("save")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
@@ -46,7 +46,7 @@ public class AsyncHostTests(ITestOutputHelper output)
     public async Task APlainTask_IsAwaited_EvenFromAnAsyncLambda()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host(async (AsyncReportService service) => { await service.TouchAsync("touched.txt"); })).Name("touch")
+            .Trigger(MockExt.Host(async (AsyncReportService service) => { await service.TouchAsync("touched.txt"); })).Label("touch")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
@@ -59,7 +59,7 @@ public class AsyncHostTests(ITestOutputHelper output)
     public async Task AnAwaitedCallThatFailsAfterItsFirstAwait_FailsItsStep()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((AsyncReportService service) => service.FailAsync())).Name("fail")
+            .Trigger(MockExt.Host((AsyncReportService service) => service.FailAsync())).Label("fail")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();

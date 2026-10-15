@@ -75,7 +75,7 @@ public class ReadmeSamplesTests
         }).Include<MailSenderPack>();
 
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Name("register")
+            .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Label("register")
             .FindArtifact("sentMail", new MockArtifactFinder("sentMail"))
             .Build();
 
@@ -100,7 +100,7 @@ public class ReadmeSamplesTests
         Timeline timeline = Timeline.Create()
             .Trigger(MockExt.Host(
                 Var.Ref<string>("email"),
-                (string email, SignupService signup) => signup.RegisterAsync(email))).Name("register")
+                (string email, SignupService signup) => signup.RegisterAsync(email))).Label("register")
             .Build();
 
         TimelineRun run = await timeline.SetupRun()
@@ -123,9 +123,9 @@ public class ReadmeSamplesTests
         }).Include<MailSenderPack>();
 
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Name("first")
+            .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Label("first")
             .FindArtifact("sentMail", new MockArtifactFinder("sentMail"))
-            .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("grace@example.com"))).Name("second")
+            .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("grace@example.com"))).Label("second")
             .CaptureArtifactVersion("sentMail")
             .Build();
 
@@ -149,8 +149,8 @@ public class ReadmeSamplesTests
 
         Timeline timeline = Timeline.Create()
             .Trigger(MockExt.Host((SignupService signup, CancellationToken cancellation) =>
-                signup.RegisterAsync("ada@example.com", cancellation))).Name("register")
-            .Trigger(MockExt.Host((SignupService signup) => signup.Forget("ada@example.com"))).Name("forget")
+                signup.RegisterAsync("ada@example.com", cancellation))).Label("register")
+            .Trigger(MockExt.Host((SignupService signup) => signup.Forget("ada@example.com"))).Label("forget")
             .Build();
 
         TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();

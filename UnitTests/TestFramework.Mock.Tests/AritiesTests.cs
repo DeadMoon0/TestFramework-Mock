@@ -97,7 +97,7 @@ public class AritiesTests(ITestOutputHelper output)
             .Trigger(MockExt.Host(
                 Var.Ref<string>("fileName"),
                 (string name, ReportService service) => service.Save(name)))
-                .Name("save")
+                .Label("save")
             .Build();
         MockEnvironment environment = MockEnvironment.For(services =>
         {
@@ -120,7 +120,7 @@ public class AritiesTests(ITestOutputHelper output)
             .Trigger(MockExt.Host(
                 Var.Ref<string>("fileName"),
                 (string name, AsyncReportService service) => service.SaveAsync(name)))
-                .Name("save")
+                .Label("save")
             .Build();
         MockEnvironment environment = MockEnvironment.For(services =>
         {

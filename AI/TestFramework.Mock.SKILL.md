@@ -28,7 +28,7 @@
     Return Task or Task<T> from Host lambdas for async services; the step then finishes when the call does.
     Give every published identity a name that says what it is, and one identity per pack.
     Assert on calls with run.Mock<T>().CountCalls(...) and on returned values with run.MockResult<T>(label).
-    Label Host steps with .Name(...) so their results can be read after the run.
+    Label Host steps with .Label(...) so their results can be read after the run.
 </best_practices>
 
 <api_hints>

@@ -52,7 +52,7 @@ MockEnvironment environment = MockEnvironment.For(services =>
 }).Include<MailSenderPack>();
 
 Timeline timeline = Timeline.Create()
-    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Name("register")
+    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Label("register")
     .FindArtifact("sentMail", new MockArtifactFinder("sentMail"))
     .Build();
 

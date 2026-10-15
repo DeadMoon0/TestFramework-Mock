@@ -35,7 +35,7 @@ public class HostCallTests(ITestOutputHelper output)
     public async Task ASynchronousVoidCall_IsASupportedShape()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((ReportService service) => service.Remove("old.txt"))).Name("remove")
+            .Trigger(MockExt.Host((ReportService service) => service.Remove("old.txt"))).Label("remove")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
@@ -48,7 +48,7 @@ public class HostCallTests(ITestOutputHelper output)
     public async Task TheStepsCancellationToken_ReachesTheCall()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((CancellableReportService service, CancellationToken cancellation) => service.TokenCanBeCancelledAsync(cancellation))).Name("token")
+            .Trigger(MockExt.Host((CancellableReportService service, CancellationToken cancellation) => service.TokenCanBeCancelledAsync(cancellation))).Label("token")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
@@ -64,7 +64,7 @@ public class HostCallTests(ITestOutputHelper output)
         // out, and the timeout reports that whatever it was going to say was never heard.
         Timeline timeline = Timeline.Create()
             .Trigger(MockExt.Host((CancellableReportService service, CancellationToken cancellation) => service.WaitUntilCancelledAsync(cancellation)))
-                .Name("wait").WithTimeOut(TimeSpan.FromMilliseconds(300))
+                .Label("wait").WithTimeout(TimeSpan.FromMilliseconds(300))
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
@@ -80,9 +80,9 @@ public class HostCallTests(ITestOutputHelper output)
         // Damage without scopes: a scoped service resolved from the root provider behaved like a singleton
         // for the whole run - one instance shared by every call, disposed only at the end of the run.
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((ScopedWorker worker) => worker.Id)).Name("first")
-            .Trigger(MockExt.Host((ScopedWorker worker) => worker.Id)).Name("second")
-            .Trigger(MockExt.Host((DisposalLog log) => log.Disposed)).Name("disposed")
+            .Trigger(MockExt.Host((ScopedWorker worker) => worker.Id)).Label("first")
+            .Trigger(MockExt.Host((ScopedWorker worker) => worker.Id)).Label("second")
+            .Trigger(MockExt.Host((DisposalLog log) => log.Disposed)).Label("disposed")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
@@ -96,8 +96,8 @@ public class HostCallTests(ITestOutputHelper output)
     public async Task ReadingAResultWithTheWrongType_IsRefusedNamingWhatTheStepReturned()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((ReportService service) => service.Save("a.txt"))).Name("save")
-            .Trigger(MockExt.Host((ReportService service) => service.Remove("a.txt"))).Name("remove")
+            .Trigger(MockExt.Host((ReportService service) => service.Save("a.txt"))).Label("save")
+            .Trigger(MockExt.Host((ReportService service) => service.Remove("a.txt"))).Label("remove")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();

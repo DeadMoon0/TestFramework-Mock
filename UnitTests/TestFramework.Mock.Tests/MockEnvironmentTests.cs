@@ -19,7 +19,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
 {
     private static readonly Timeline _timeline = Timeline.Create()
         .Trigger(MockExt.Host((ReportService service) => service.Save("report.txt")))
-            .Name("save")
+            .Label("save")
         .Build();
 
     private static MockEnvironment CreateEnvironment()
@@ -138,7 +138,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
     public async Task AServiceRegisteredAsAnOpenGeneric_CanBeHosted()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((Repository<string> repository) => repository.Describe())).Name("describe")
+            .Trigger(MockExt.Host((Repository<string> repository) => repository.Describe())).Label("describe")
             .Build();
         MockEnvironment environment = MockEnvironment.For(services => services.AddSingleton(typeof(Repository<>)));
 
@@ -154,7 +154,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         // Damage without it: the keyed registration survived, and a service asking for it by key was
         // handed the real dependency while the test believed it ran against the double.
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((KeyedReportService service) => service.Archive("a.txt"))).Name("archive")
+            .Trigger(MockExt.Host((KeyedReportService service) => service.Archive("a.txt"))).Label("archive")
             .Build();
         MockEnvironment environment = MockEnvironment.For(services =>
         {
@@ -211,7 +211,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         // Dispose was refused - on a background thread, a refusal like that can end the test process. The
         // records now close with the run itself, after the environment's teardown.
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((FlushingReportService service) => service.Save("report.txt"))).Name("save")
+            .Trigger(MockExt.Host((FlushingReportService service) => service.Save("report.txt"))).Label("save")
             .Build();
         MockEnvironment environment = MockEnvironment.For(services =>
         {

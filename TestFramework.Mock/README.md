@@ -51,7 +51,7 @@ MockEnvironment environment = MockEnvironment.For(services =>
 }).Include<MailSenderPack>();
 
 Timeline timeline = Timeline.Create()
-    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Name("register")
+    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Label("register")
     .FindArtifact("sentMail", new MockArtifactFinder("sentMail"))
     .Build();
 
@@ -209,7 +209,7 @@ the call's own arguments, which can be bound from run variables:
 Timeline timeline = Timeline.Create()
     .Trigger(MockExt.Host(
         Var.Ref<string>("email"),
-        (string email, SignupService signup) => signup.RegisterAsync(email))).Name("register")
+        (string email, SignupService signup) => signup.RegisterAsync(email))).Label("register")
     .Build();
 
 TimelineRun run = await timeline.SetupRun()
@@ -228,7 +228,7 @@ TimelineRun run = await timeline.SetupRun()
 
   ```csharp
   .Trigger(MockExt.Host((SignupService signup, CancellationToken cancellation) =>
-      signup.RegisterAsync("ada@example.com", cancellation))).Name("register")
+      signup.RegisterAsync("ada@example.com", cancellation))).Label("register")
   ```
 
 - Every call runs in a scope of its own, the way production opens one per request: scoped services are
@@ -256,9 +256,9 @@ A version is a look the timeline took, with Core's own verb:
 
 ```csharp
 Timeline timeline = Timeline.Create()
-    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Name("first")
+    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("ada@example.com"))).Label("first")
     .FindArtifact("sentMail", new MockArtifactFinder("sentMail"))
-    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("grace@example.com"))).Name("second")
+    .Trigger(MockExt.Host((SignupService signup) => signup.RegisterAsync("grace@example.com"))).Label("second")
     .CaptureArtifactVersion("sentMail")
     .Build();
 ```

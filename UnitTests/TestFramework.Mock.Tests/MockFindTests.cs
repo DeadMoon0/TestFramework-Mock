@@ -35,10 +35,10 @@ public class MockFindTests(ITestOutputHelper output)
     public async Task FindBringsThePublishIn_AndEachLaterLookIsAVersion_WithoutConsumingAnything()
     {
         Timeline timeline = Timeline.Create()
-            .Trigger(MockExt.Host((ReportService service) => service.Save("first.txt"))).Name("save-first")
+            .Trigger(MockExt.Host((ReportService service) => service.Save("first.txt"))).Label("save-first")
             .FindArtifact("createdFile", new MockArtifactFinder("createdFile"))
             .CaptureArtifactVersion("createdFile")
-            .Trigger(MockExt.Host((ReportService service) => service.Save("second.txt"))).Name("save-second")
+            .Trigger(MockExt.Host((ReportService service) => service.Save("second.txt"))).Label("save-second")
             .CaptureArtifactVersion("createdFile")
             .Build();
 
@@ -60,7 +60,7 @@ public class MockFindTests(ITestOutputHelper output)
     {
         Timeline timeline = Timeline.Create()
             .FindArtifact("createdFile", new MockArtifactFinder("createdFile"))
-            .Trigger(MockExt.Host((ReportService service) => service.Save("late.txt"))).Name("save")
+            .Trigger(MockExt.Host((ReportService service) => service.Save("late.txt"))).Label("save")
             .Build();
 
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
