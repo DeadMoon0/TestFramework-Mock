@@ -93,7 +93,7 @@ public class AritiesTests(ITestOutputHelper output)
     public async Task HostArguments_BindFromRunVariables_AndTheIOContractCarriesThem()
     {
         Timeline timeline = Timeline.Create()
-            .SetVariable("fileName", Var.Const("from-variable.txt"))
+            .SetVariable("fileName", "from-variable.txt")
             .Trigger(MockExt.Host(
                 Var.Ref<string>("fileName"),
                 (string name, ReportService service) => service.Save(name)))
@@ -116,7 +116,7 @@ public class AritiesTests(ITestOutputHelper output)
     public async Task HostArguments_BindFromRunVariables_ForAnAwaitedCallToo()
     {
         Timeline timeline = Timeline.Create()
-            .SetVariable("fileName", Var.Const("awaited.txt"))
+            .SetVariable("fileName", "awaited.txt")
             .Trigger(MockExt.Host(
                 Var.Ref<string>("fileName"),
                 (string name, AsyncReportService service) => service.SaveAsync(name)))
