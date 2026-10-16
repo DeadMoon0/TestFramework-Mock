@@ -79,6 +79,40 @@ public static partial class MockExt
     }
 
     /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<TService, TResult>(
+        Func<TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (_, service, cancellation) => Task.FromResult(call(service, cancellation)),
+            []);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<TService>(
+        Action<TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (_, service, cancellation) =>
+            {
+                call(service, cancellation);
+                return Task.CompletedTask;
+            },
+            []);
+    }
+
+    /// <summary>
     /// A trigger that calls the hosted service with the step's cancellation token — cancelled when the
     /// step times out or the run is stopped — and awaits the task it returns.
     /// </summary>
@@ -176,6 +210,44 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, TService, TResult>(
+        VariableReference<T1> argument1,
+        Func<T1, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, service, cancellation)),
+            [argument1]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, TService>(
+        VariableReference<T1> argument1,
+        Action<T1, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1]);
@@ -291,6 +363,48 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        Func<T1, T2, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        Action<T1, T2, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2]);
@@ -418,6 +532,52 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2, argument3]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, T3, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        Func<T1, T2, T3, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2, argument3]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, T3, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        Action<T1, T2, T3, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2, argument3]);
@@ -557,6 +717,56 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2, argument3, argument4]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, T3, T4, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        Func<T1, T2, T3, T4, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2, argument3, argument4]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, T3, T4, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        Action<T1, T2, T3, T4, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2, argument3, argument4]);
@@ -708,6 +918,60 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2, argument3, argument4, argument5]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, T3, T4, T5, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        Func<T1, T2, T3, T4, T5, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2, argument3, argument4, argument5]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, T3, T4, T5, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        Action<T1, T2, T3, T4, T5, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2, argument3, argument4, argument5]);
@@ -871,6 +1135,64 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2, argument3, argument4, argument5, argument6]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, T3, T4, T5, T6, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        VariableReference<T6> argument6,
+        Func<T1, T2, T3, T4, T5, T6, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(argument6);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2, argument3, argument4, argument5, argument6]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, T3, T4, T5, T6, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        VariableReference<T6> argument6,
+        Action<T1, T2, T3, T4, T5, T6, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(argument6);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2, argument3, argument4, argument5, argument6]);
@@ -1046,6 +1368,68 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, argument7.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2, argument3, argument4, argument5, argument6, argument7]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, T3, T4, T5, T6, T7, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        VariableReference<T6> argument6,
+        VariableReference<T7> argument7,
+        Func<T1, T2, T3, T4, T5, T6, T7, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(argument6);
+        ArgumentNullException.ThrowIfNull(argument7);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, argument7.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2, argument3, argument4, argument5, argument6, argument7]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, T3, T4, T5, T6, T7, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        VariableReference<T6> argument6,
+        VariableReference<T7> argument7,
+        Action<T1, T2, T3, T4, T5, T6, T7, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(argument6);
+        ArgumentNullException.ThrowIfNull(argument7);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, argument7.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2, argument3, argument4, argument5, argument6, argument7]);
@@ -1233,6 +1617,72 @@ public static partial class MockExt
             (variables, service, _) =>
             {
                 call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, argument7.GetValue(variables)!, argument8.GetValue(variables)!, service);
+                return Task.CompletedTask;
+            },
+            [argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<T1, T2, T3, T4, T5, T6, T7, T8, TService, TResult>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        VariableReference<T6> argument6,
+        VariableReference<T7> argument7,
+        VariableReference<T8> argument8,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(argument6);
+        ArgumentNullException.ThrowIfNull(argument7);
+        ArgumentNullException.ThrowIfNull(argument8);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService, TResult>(
+            (variables, service, cancellation) => Task.FromResult(call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, argument7.GetValue(variables)!, argument8.GetValue(variables)!, service, cancellation)),
+            [argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<T1, T2, T3, T4, T5, T6, T7, T8, TService>(
+        VariableReference<T1> argument1,
+        VariableReference<T2> argument2,
+        VariableReference<T3> argument3,
+        VariableReference<T4> argument4,
+        VariableReference<T5> argument5,
+        VariableReference<T6> argument6,
+        VariableReference<T7> argument7,
+        VariableReference<T8> argument8,
+        Action<T1, T2, T3, T4, T5, T6, T7, T8, TService, CancellationToken> call)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(argument1);
+        ArgumentNullException.ThrowIfNull(argument2);
+        ArgumentNullException.ThrowIfNull(argument3);
+        ArgumentNullException.ThrowIfNull(argument4);
+        ArgumentNullException.ThrowIfNull(argument5);
+        ArgumentNullException.ThrowIfNull(argument6);
+        ArgumentNullException.ThrowIfNull(argument7);
+        ArgumentNullException.ThrowIfNull(argument8);
+        ArgumentNullException.ThrowIfNull(call);
+
+        return new MockHostCallTrigger<TService>(
+            (variables, service, cancellation) =>
+            {
+                call(argument1.GetValue(variables)!, argument2.GetValue(variables)!, argument3.GetValue(variables)!, argument4.GetValue(variables)!, argument5.GetValue(variables)!, argument6.GetValue(variables)!, argument7.GetValue(variables)!, argument8.GetValue(variables)!, service, cancellation);
                 return Task.CompletedTask;
             },
             [argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8]);

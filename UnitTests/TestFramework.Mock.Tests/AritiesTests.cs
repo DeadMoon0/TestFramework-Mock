@@ -39,7 +39,7 @@ public class AritiesTests(ITestOutputHelper output)
     [Fact]
     public void Host_HasEveryShape_ForEveryArgumentCount_FromNoneToTheCap()
     {
-        // Six shapes per count, so a call always binds to an overload that treats it correctly: a
+        // Eight shapes per count, so a call always binds to an overload that treats it correctly: a
         // missing shape silently hands the call to another one - a task returned unawaited, a void
         // call that does not compile, a token the call never gets.
         string[] expected =
@@ -48,6 +48,8 @@ public class AritiesTests(ITestOutputHelper output)
             "Func -> Task<TResult>",
             "Func -> Task",
             "Action",
+            "Action + CancellationToken",
+            "Func + CancellationToken -> TResult",
             "Func + CancellationToken -> Task<TResult>",
             "Func + CancellationToken -> Task",
         ];
@@ -140,13 +142,42 @@ public class AritiesTests(ITestOutputHelper output)
         Type[] parts = call.GetGenericArguments();
         if (call.Name.StartsWith("Action", StringComparison.Ordinal))
         {
-            return "Action";
+            return parts.Length >= 1 && parts[^1] == typeof(System.Threading.CancellationToken) ? "Action + CancellationToken" : "Action";
         }
 
         bool takesToken = parts.Length >= 2 && parts[^2] == typeof(System.Threading.CancellationToken);
         Type result = parts[^1];
         string resultName = result.IsGenericType ? $"{result.Name[..result.Name.IndexOf('`')]}<{result.GetGenericArguments()[0].Name}>" : result.Name;
         return takesToken ? $"Func + CancellationToken -> {resultName}" : $"Func -> {resultName}";
+    }
+
+    [Fact]
+    public async Task ASynchronousCall_ReceivesTheStepsToken_AndCanStopWithIt()
+    {
+        // A synchronous call doing work in steps checks the token between them; without this shape it had no
+        // token to check and ran until it was abandoned.
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((ReportService service, System.Threading.CancellationToken cancellation) =>
+            {
+                while (!cancellation.IsCancellationRequested)
+                    System.Threading.Thread.Sleep(10);
+
+                return cancellation.IsCancellationRequested;
+            }))
+                .WithTimeout(TimeSpan.FromMilliseconds(300)).Label("work")
+            .Build();
+        MockEnvironment environment = MockEnvironment.For(services =>
+        {
+            services.AddSingleton<IFileStore, UnreachableFileStore>();
+            services.AddSingleton<ReportService>();
+        });
+
+        System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
+
+        // The call saw its step's deadline fire and chose to return; what it returned is the step's result.
+        Assert.True(run.HostResult<bool>("work"));
+        Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(5), $"The call did not stop with its token ({elapsed.Elapsed}).");
     }
 
     private static void AssertSingleGenericOverload(Type type, string methodName, int arity)

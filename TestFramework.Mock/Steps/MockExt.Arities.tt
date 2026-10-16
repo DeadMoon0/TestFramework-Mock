@@ -3,10 +3,10 @@
 <#@ output extension=".g.cs" #>
 <#
     // Every Host overload, for every argument count from none to eight: each argument is bound from a
-    // run variable and the hosted service arrives behind the call's own arguments. Six shapes per count,
+    // run variable and the hosted service arrives behind the call's own arguments. Eight shapes per count,
     // so a call always binds to an overload that treats it correctly - a synchronous result, an awaited
-    // Task<T>, an awaited Task, a synchronous void call, and the two awaited shapes again with the step's
-    // cancellation token behind the service.
+    // Task<T>, an awaited Task, a synchronous void call, and all four again with the step's cancellation
+    // token behind the service.
     // Regenerate with: dotnet t4 MockExt.Arities.tt
     const int MaxArity = 8;
 
@@ -94,6 +94,38 @@ public static partial class MockExt
             (<#= Variables(n) #>, service, _) =>
             {
                 call(<#= ResolvedPrefix(n) #>service);
+                return Task.CompletedTask;
+            },
+            [<#= Refs(n) #>]);
+    }
+
+    /// <summary>
+    /// A trigger that calls the hosted service synchronously with the step's cancellation token — cancelled
+    /// when the step times out or the run is stopped — so a call doing work in steps can stop between them.
+    /// A call that returns an awaitable binds to the awaiting overloads instead.
+    /// </summary>
+    public static MockHostCallTrigger<TService, TResult> Host<<#= TypesPrefix(n) #>TService, TResult>(
+        <#= Parameters(n) #>Func<<#= TypesPrefix(n) #>TService, CancellationToken, TResult> call)
+        where TService : class
+    {
+<#= guards #>
+        return new MockHostCallTrigger<TService, TResult>(
+            (<#= Variables(n) #>, service, cancellation) => Task.FromResult(call(<#= ResolvedPrefix(n) #>service, cancellation)),
+            [<#= Refs(n) #>]);
+    }
+
+    /// <summary>
+    /// A trigger that calls a synchronous void method on the hosted service with the step's cancellation token.
+    /// </summary>
+    public static MockHostCallTrigger<TService> Host<<#= TypesPrefix(n) #>TService>(
+        <#= Parameters(n) #>Action<<#= TypesPrefix(n) #>TService, CancellationToken> call)
+        where TService : class
+    {
+<#= guards #>
+        return new MockHostCallTrigger<TService>(
+            (<#= Variables(n) #>, service, cancellation) =>
+            {
+                call(<#= ResolvedPrefix(n) #>service, cancellation);
                 return Task.CompletedTask;
             },
             [<#= Refs(n) #>]);
