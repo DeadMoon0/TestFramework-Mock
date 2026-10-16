@@ -103,16 +103,40 @@ internal static class MockHost
     }
 
     /// <summary>
-    /// Declares each named argument variable as a step input, so the planner sees the dependency.
+    /// Declares each named argument variable as a step input, typed as the call reads it, so the planner sees
+    /// the dependency and checks that whatever produces the variable produces that type.
     /// </summary>
     public static void DeclareArguments(StepIOContract contract, IEnumerable<VariableReferenceGeneric> arguments)
     {
         foreach (VariableReferenceGeneric argument in arguments)
         {
-            if (argument.HasIdentifier)
+            if (argument.Identifier is not { } identifier)
+            {
+                continue;
+            }
+
+            if (ReadAs(argument) is { } type)
+            {
+                contract.Input(identifier, type);
+            }
+            else
             {
                 contract.Input(argument);
             }
         }
+    }
+
+    // The T of the VariableReference<T> the argument is, found on its own type or a base of it.
+    private static Type? ReadAs(VariableReferenceGeneric argument)
+    {
+        for (Type? type = argument.GetType(); type is not null; type = type.BaseType)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(VariableReference<>))
+            {
+                return type.GetGenericArguments()[0];
+            }
+        }
+
+        return null;
     }
 }

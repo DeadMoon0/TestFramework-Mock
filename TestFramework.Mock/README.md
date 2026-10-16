@@ -286,6 +286,8 @@ services — give each its own identity.
 ## Verifying Calls
 
 ```csharp
+using TestFramework.Mock.Recording;   // RecordedCall
+
 MockInstance<IMailSender> mail = run.Mock<IMailSender>();
 
 int count = mail.CountCalls(m => m.SendAsync(MockArg.Any<string>(), "Welcome"));

@@ -121,6 +121,31 @@ public class MockCompositionTests(ITestOutputHelper output)
         Assert.Contains(refusal.RecoverySteps, step => step.Contains("AddLogging()", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task CallsMadeAtTheSameTime_AreEachRecordedOnce_InADistinctOrder()
+    {
+        // A system under test that fans work out calls its dependencies from several threads at once; every one
+        // of those calls is evidence.
+        const int calls = 64;
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((ReportService service) => Parallel.For(0, calls, index => service.Save($"report-{index}.txt"))))
+                .Label("fan-out")
+            .Build();
+        MockEnvironment environment = MockEnvironment.For(services =>
+        {
+            services.AddSingleton<IFileStore, UnreachableFileStore>();
+            services.AddSingleton<ReportService>();
+        }).Include<FileStorePack>();
+
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
+
+        run.EnsureRanToCompletion();
+        MockInstance<IFileStore> mock = run.Mock<IFileStore>();
+        Assert.Equal(calls, mock.RecordedCalls.Count);
+        Assert.Equal(calls, mock.RecordedCalls.Select(call => call.Sequence).Distinct().Count());
+        Assert.Equal(calls, mock.RecordedCalls.Select(call => call.Arguments[0]).Distinct().Count());
+    }
+
     public interface IClock
     {
         DateTimeOffset Now { get; }

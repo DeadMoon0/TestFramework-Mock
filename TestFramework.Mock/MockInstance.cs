@@ -22,8 +22,6 @@ namespace TestFramework.Mock;
 public sealed class MockInstance<TService> : MockInstanceGeneric
     where TService : class
 {
-    // Castle caches generated proxy types per generator, so the family shares one.
-    private static readonly ProxyGenerator _proxyGenerator = new();
 
     private readonly MockCallRecorder _recorder;
     private readonly MockArtifactRecord _artifactRecord;
@@ -33,7 +31,7 @@ public sealed class MockInstance<TService> : MockInstanceGeneric
         this._recorder = new MockCallRecorder(context);
         this._artifactRecord = new MockArtifactRecord(context);
         MockInterceptor interceptor = new(setups, this._recorder, new MockArtifacts(this._artifactRecord));
-        this.Object = (TService)_proxyGenerator.CreateInterfaceProxyWithoutTarget(typeof(TService), interceptor);
+        this.Object = (TService)MockProxies.Generator.CreateInterfaceProxyWithoutTarget(typeof(TService), interceptor);
     }
 
     /// <summary>
