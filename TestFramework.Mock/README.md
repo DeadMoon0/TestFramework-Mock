@@ -182,10 +182,23 @@ MockEnvironment environment = MockEnvironment.For(services => services.AddMyAppl
 `For` takes the same registrations production makes, handed over rather than rebuilt, so the test hosts
 what actually ships. For each included pack the environment removes every registration of the service —
 the plain one, every keyed one, and so everything an `IEnumerable<TService>` would resolve — and puts the
-run's double in each of those places, so nothing reaches the real dependency whichever way it asks.
+run's double in each of those places, so nothing that asks the container for the service reaches the real
+dependency. Only what is asked for by the service type is replaced: code that depends on the concrete class,
+or a factory registration that constructs the real implementation itself, still reaches it.
 
 - Including the same pack twice is allowed and has no effect. Two packs for the same service are refused
   naming both.
+- A pack is checked when it is included: a service that is not an interface, an interface the engine cannot
+  see, or a `Configure` whose setups contradict themselves is refused at that line.
+- A pack stands in for a service the composition registers. One whose service the composition never registers
+  is refused when the run is planned — it would stand in for nothing, and every call count would read zero.
+  To add a double as a service the composition lacks, include it with `IncludeAdditional<TPack>()`.
+- The composition delegate runs once to declare what the environment offers and once per run, so each run
+  gets instances of its own. It must register the same services each time; a run whose composition registers
+  a different set is refused, naming what changed.
+- A hosted service whose own dependencies the composition lacks fails with the container's message in full.
+  A bare composition has none of what the generic host adds: register `services.AddLogging()` and an
+  `IConfiguration` yourself when the system under test needs them.
 - The environment seals when the first run uses it: including another pack after that is refused, so every
   run hosts the same declaration.
 - Every run gets its own host, doubles and call logs, so parallel runs never share state.

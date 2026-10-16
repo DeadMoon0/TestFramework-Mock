@@ -23,4 +23,9 @@ public abstract class MockDefinitionGeneric
     /// One run's live double, untyped.
     /// </summary>
     internal abstract MockInstanceGeneric CreateInstanceGeneric(RunContext context);
+
+    /// <summary>
+    /// Refuses a pack that could never become a double, while it is included.
+    /// </summary>
+    internal abstract void ValidateShape();
 }

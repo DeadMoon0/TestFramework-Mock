@@ -32,8 +32,7 @@ internal sealed class MockHostEnvComponent : EnvComponent
 
     public override Task<object?> CreateAsync(IEnvironmentProvider environment, RunContext context)
     {
-        ServiceCollection services = new();
-        this._owner.ComposeServices(services);
+        ServiceCollection services = this._owner.ComposeServicesForRun();
 
         Dictionary<Type, MockInstanceGeneric> instances = [];
         foreach (MockDefinitionGeneric pack in this._owner.CreatePacksForRun())
@@ -41,7 +40,11 @@ internal sealed class MockHostEnvComponent : EnvComponent
             MockInstanceGeneric instance = pack.CreateInstanceGeneric(context);
             string service = instance.ServiceType.FullName ?? instance.ServiceType.Name;
 
-            foreach (object? key in ReplaceEveryRegistration(services, instance.ServiceType, instance.ProxyObject))
+            IReadOnlyList<object?> keys = this._owner.IsAdditional(instance.ServiceType)
+                ? AddAsNewService(services, instance.ServiceType, instance.ProxyObject)
+                : ReplaceEveryRegistration(services, instance.ServiceType, instance.ProxyObject);
+
+            foreach (object? key in keys)
             {
                 context.EffectiveSettings.Record(MockResourceKinds.Host, $"{service}[{key}]", pack.GetType().Name);
             }
@@ -83,9 +86,13 @@ internal sealed class MockHostEnvComponent : EnvComponent
 
     /// <summary>
     /// Removes every registration of the service - the plain one, every keyed one, and so every
-    /// <c>IEnumerable&lt;TService&gt;</c> - and puts the double in each slot, so nothing still reaches
-    /// the real dependency, whichever way it asks.
+    /// <c>IEnumerable&lt;TService&gt;</c> - and puts the double in each slot, so nothing that asks the
+    /// container for the service reaches the real dependency.
     /// </summary>
+    /// <remarks>
+    /// Only what is asked for by the service type is replaced. Code that depends on the concrete class, or a
+    /// factory registration that constructs the real implementation itself, still reaches it.
+    /// </remarks>
     /// <returns>The keys the double now also stands under.</returns>
     private static IReadOnlyList<object?> ReplaceEveryRegistration(IServiceCollection services, Type serviceType, object proxy)
     {
@@ -109,5 +116,11 @@ internal sealed class MockHostEnvComponent : EnvComponent
         }
 
         return keys;
+    }
+
+    private static IReadOnlyList<object?> AddAsNewService(IServiceCollection services, Type serviceType, object proxy)
+    {
+        services.AddSingleton(serviceType, proxy);
+        return [];
     }
 }

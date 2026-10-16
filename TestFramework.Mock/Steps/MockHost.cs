@@ -67,10 +67,34 @@ internal static class MockHost
     /// <summary>
     /// Resolves the system under test from one hosted call's scope.
     /// </summary>
+    /// <remarks>
+    /// A registered service whose own dependencies the composition lacks fails inside the container, and
+    /// that is the first failure most compositions meet: a bare <c>ServiceCollection</c> has none of what the
+    /// generic host adds for free. The container's own sentence names the missing piece, so it is carried in
+    /// the message word for word rather than left on an inner exception a reader may never see.
+    /// </remarks>
     public static TService Resolve<TService>(IServiceProvider callScope)
         where TService : class
     {
-        return callScope.GetService<TService>()
+        TService? service;
+        try
+        {
+            service = callScope.GetService<TService>();
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new FrameworkConfigurationException(
+                $"'{typeof(TService).Name}' is registered in the hosted services, but could not be built: {exception.Message}", exception)
+            {
+                RecoverySteps =
+                [
+                    "Register what the message names in the composition handed to MockEnvironment.For(...).",
+                    "The generic host normally provides logging, configuration and the host environment; a bare composition needs services.AddLogging() and an IConfiguration registration of its own.",
+                ],
+            };
+        }
+
+        return service
             ?? throw new FrameworkConfigurationException(
                 $"'{typeof(TService).Name}' is not registered in the hosted services.")
             {

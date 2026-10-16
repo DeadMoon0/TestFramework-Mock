@@ -13,20 +13,25 @@ it without re-running the test.
 | building the timeline | `Host` call yields an awaitable it would not await (`ValueTask`, a task of a task) | `FrameworkConfigurationException` |
 | building the environment | a second pack for a service another pack already replaces | `FrameworkConfigurationException` |
 | building the environment | a pack included after a run has already used the environment | `FrameworkConfigurationException` |
-| the run's environment starts | a setup is not a single direct method call on the service | `FrameworkConfigurationException` |
-| the run's environment starts | `MockArg` used inside a larger argument expression | `FrameworkConfigurationException` |
-| the run's environment starts | an `out` position holds anything but `MockArg.Ref<T>.Any`, or the placeholder stands outside an `out` or `ref` position | `FrameworkConfigurationException` |
-| the run's environment starts | a setup leaves an `out` parameter unassigned | `FrameworkConfigurationException` |
-| the run's environment starts | `Assigns` names no `out` or `ref` parameter, states a value of the wrong type, or states one twice | `FrameworkConfigurationException` |
-| the run's environment starts | `Throws` together with `Assigns` on one setup | `FrameworkConfigurationException` |
-| the run's environment starts | a typed lambda does not fit the mocked method | `FrameworkConfigurationException` |
-| the run's environment starts | a setup states its result twice | `FrameworkConfigurationException` |
-| the run's environment starts | a value-returning setup states no result | `FrameworkConfigurationException` |
-| the run's environment starts | `Throws` or `ThrowsAsync` together with `ProducesArtifact` on one setup | `FrameworkConfigurationException` |
-| the run's environment starts | the mocked service is not an interface | `FrameworkConfigurationException` |
+| building the environment (`Include`) | a setup is not a single direct method call on the service | `FrameworkConfigurationException` |
+| building the environment (`Include`) | `MockArg` used inside a larger argument expression | `FrameworkConfigurationException` |
+| building the environment (`Include`) | an `out` position holds anything but `MockArg.Ref<T>.Any`, or the placeholder stands outside an `out` or `ref` position | `FrameworkConfigurationException` |
+| building the environment (`Include`) | a setup leaves an `out` parameter unassigned | `FrameworkConfigurationException` |
+| building the environment (`Include`) | `Assigns` names no `out` or `ref` parameter, states a value of the wrong type, or states one twice | `FrameworkConfigurationException` |
+| building the environment (`Include`) | `Throws` together with `Assigns` on one setup | `FrameworkConfigurationException` |
+| building the environment (`Include`) | a typed lambda does not fit the mocked method | `FrameworkConfigurationException` |
+| building the environment (`Include`) | a setup states its result twice | `FrameworkConfigurationException` |
+| building the environment (`Include`) | a value-returning setup states no result | `FrameworkConfigurationException` |
+| building the environment (`Include`) | `Throws` or `ThrowsAsync` together with `ProducesArtifact` on one setup | `FrameworkConfigurationException` |
+| building the environment (`Include`) | the mocked service is not an interface | `FrameworkConfigurationException` |
+| building the environment (`Include`) | the mocked interface is not public and its assembly does not grant `DynamicProxyGenAssembly2` | `FrameworkConfigurationException` |
+| planning the run | an included pack's service is never registered by the composition (use `IncludeAdditional<TPack>()` to add it) | `FrameworkConfigurationException` |
+| planning the run | an `IncludeAdditional` pack's service is registered by the composition | `FrameworkConfigurationException` |
+| the run's environment starts | the composition registers different services than when the run was planned | `FrameworkConfigurationException` |
 | the run's environment starts | a second mock host in one run | `FrameworkStateException` |
 | after the double is built | a setup or builder kept past `Configure` is changed | `FrameworkStateException` |
 | planning the run | a `Host` step's service is declared by nothing — no `SetEnv(MockEnvironment...)`, or not registered in the composition | `FrameworkConfigurationException` (from Core, listing what is registered) |
+| a `Host` step runs | the service is registered but the container cannot build it (the container's message is carried in full) | `FrameworkConfigurationException` |
 | the system under test calls a double | no setup matches the call | `FrameworkConfigurationException` |
 | the system under test calls a double | more than one setup matches the call | `FrameworkConfigurationException` |
 | the system under test calls a double | the run has already finished | none: the double answers, the call is not recorded, and the run's log says so |
@@ -37,8 +42,8 @@ it without re-running the test.
 Not an error: a `MockArtifactFinder` whose identity nothing has published yet. It finds nothing and logs a
 warning, like any empty finder.
 
-Packs are instantiated when the run's environment starts, so every pack mistake fails the run before its
-first step — never halfway through.
+Every pack is checked when it is included — its `Configure` runs once on a throwaway instance — so a pack
+mistake fails at the line that includes it, and never halfway through a run.
 
 ## Refusals Inside The System Under Test
 

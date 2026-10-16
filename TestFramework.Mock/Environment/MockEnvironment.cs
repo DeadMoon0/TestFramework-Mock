@@ -20,8 +20,10 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
 {
     private readonly Action<IServiceCollection> _composeServices;
     private readonly object _gate = new();
-    private readonly Dictionary<Type, Type> _packTypeByService = [];
+    private readonly Dictionary<Type, IncludedPack> _packsByService = [];
     private readonly List<Func<MockDefinitionGeneric>> _packFactories = [];
+    private IReadOnlyList<ResourceNode>? _declaredNodes;
+    private IReadOnlySet<Type>? _declaredServiceTypes;
     private bool _sealed;
 
     private MockEnvironment(Action<IServiceCollection> composeServices)
@@ -36,6 +38,11 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     /// States how the system under test composes its services — the same registrations
     /// production makes, handed over rather than rebuilt, so the test hosts what actually ships.
     /// </summary>
+    /// <remarks>
+    /// The delegate runs once to declare what the environment offers, and again for every run, so each run
+    /// gets instances of its own. It must register the same services each time; a run whose composition
+    /// registers a different set is refused, because the run was planned against the first.
+    /// </remarks>
     public static MockEnvironment For(Action<IServiceCollection> composeServices)
     {
         ArgumentNullException.ThrowIfNull(composeServices);
@@ -44,21 +51,48 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     }
 
     /// <summary>
-    /// Includes one Mock-Pack. Including the same pack again is idempotent; a second pack
-    /// replacing the same service is refused naming both, because a container would hand out the
-    /// later one and the earlier would vanish silently. Every pack is included before the first run
-    /// that uses this environment; after that the environment is sealed, so every run hosts the same
-    /// declaration.
+    /// Includes one Mock-Pack, standing in for a service the composition registers. Including the same
+    /// pack again is idempotent; a second pack replacing the same service is refused naming both, because
+    /// a container would hand out the later one and the earlier would vanish silently. Every pack is
+    /// included before the first run that uses this environment; after that the environment is sealed, so
+    /// every run hosts the same declaration.
     /// </summary>
+    /// <remarks>
+    /// A pack whose service the composition never registers is refused when the run is planned: it would
+    /// stand in for nothing, every call count would read zero, and a renamed dependency would never be
+    /// noticed. When the double is meant to add a service the composition lacks, include it with
+    /// <see cref="IncludeAdditional{TPack}"/>.
+    /// </remarks>
     public MockEnvironment Include<TPack>()
         where TPack : MockDefinitionGeneric, new()
+        => this.Add<TPack>(additional: false);
+
+    /// <summary>
+    /// Includes one Mock-Pack for a service the composition does not register, adding the double as that
+    /// service. Everything else is as <see cref="Include{TPack}"/>.
+    /// </summary>
+    /// <remarks>
+    /// Refused when the composition does register the service: the pack then replaces a registration, which
+    /// is what <see cref="Include{TPack}"/> says.
+    /// </remarks>
+    public MockEnvironment IncludeAdditional<TPack>()
+        where TPack : MockDefinitionGeneric, new()
+        => this.Add<TPack>(additional: true);
+
+    private MockEnvironment Add<TPack>(bool additional)
+        where TPack : MockDefinitionGeneric, new()
     {
-        Type serviceType = new TPack().ServiceType;
+        TPack probe = new();
+
+        // Here rather than when a run starts: everything the shape check needs is known now, and a refusal at
+        // the line that included the pack points at the line to change.
+        probe.ValidateShape();
+        Type serviceType = probe.ServiceType;
 
         lock (this._gate)
         {
-            this._packTypeByService.TryGetValue(serviceType, out Type? existing);
-            if (existing == typeof(TPack))
+            this._packsByService.TryGetValue(serviceType, out IncludedPack? existing);
+            if (existing is not null && existing.PackType == typeof(TPack) && existing.Additional == additional)
             {
                 return this;
             }
@@ -69,20 +103,20 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
                     $"'{typeof(TPack).Name}' was included after a run had already used this environment.")
                 {
                     RecoverySteps = ["Include every pack while building the environment, before the first run is set up with it."],
-                    AvailableOptions = [.. this._packTypeByService.Values.Select(type => type.Name)],
+                    AvailableOptions = [.. this._packsByService.Values.Select(pack => pack.PackType.Name)],
                 };
             }
 
             if (existing is not null)
             {
                 throw new FrameworkConfigurationException(
-                    $"Two packs replace '{serviceType.Name}': '{existing.Name}' and '{typeof(TPack).Name}'.")
+                    $"Two packs replace '{serviceType.Name}': '{existing.PackType.Name}' and '{typeof(TPack).Name}'.")
                 {
                     RecoverySteps = ["Keep one pack per service; merge the setups into one definition if both behaviours are meant."],
                 };
             }
 
-            this._packTypeByService[serviceType] = typeof(TPack);
+            this._packsByService[serviceType] = new IncludedPack(typeof(TPack), additional);
 
             // A fresh pack per run, never one shared object: Configure runs once per run, and a field a
             // pack author reaches for would otherwise carry one run's state into the next - and race
@@ -106,9 +140,39 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
         }
     }
 
-    internal void ComposeServices(IServiceCollection services)
+    /// <summary>
+    /// Composes one run's services, refusing a composition that registers different services than the
+    /// environment declared.
+    /// </summary>
+    internal ServiceCollection ComposeServicesForRun()
     {
+        IReadOnlySet<Type> declared = this.Declare().ServiceTypes;
+
+        ServiceCollection services = new();
         this._composeServices(services);
+
+        HashSet<Type> composed = RegisteredServiceTypes(services);
+        if (!composed.SetEquals(declared))
+        {
+            string added = Describe(composed.Except(declared));
+            string missing = Describe(declared.Except(composed));
+            throw new FrameworkConfigurationException(
+                $"The composition handed to MockEnvironment.For registered different services for this run than when the run was planned (added: {added}; missing: {missing}).")
+            {
+                RecoverySteps = ["Register the same services every time the delegate runs; a service that is only sometimes present belongs in its own environment."],
+            };
+        }
+
+        return services;
+    }
+
+    /// <summary>Whether a pack stands in for a service the composition registers, or adds one of its own.</summary>
+    internal bool IsAdditional(Type serviceType)
+    {
+        lock (this._gate)
+        {
+            return this._packsByService.TryGetValue(serviceType, out IncludedPack? pack) && pack.Additional;
+        }
     }
 
     /// <summary>
@@ -122,42 +186,90 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     /// registered, and a run without this environment is refused the same way.
     /// </summary>
     /// <remarks>
-    /// Composed afresh for each read, from the same registrations every run hosts. A keyed-only
-    /// registration is left out, because a <c>Host</c> step resolves its service without a key; an open
-    /// generic registration is declared under its definition's name, which a <c>Host</c> step for a closed
-    /// type of it requires.
+    /// Composed once, the first time it is read, and kept: reading it again does not run the delegate again.
+    /// A keyed-only registration is left out, because a <c>Host</c> step resolves its service without a key;
+    /// an open generic registration is declared under its definition's name, which a <c>Host</c> step for a
+    /// closed type of it requires.
     /// </remarks>
-    public IReadOnlyList<ResourceNode> Nodes => new HostedServices(this).Nodes;
+    /// <exception cref="FrameworkConfigurationException">An included pack's service is not registered by the
+    /// composition, or an additional pack's service is.</exception>
+    public IReadOnlyList<ResourceNode> Nodes => this.Declare().Nodes;
 
-    private sealed class HostedServices(MockEnvironment environment) : DeclaredNodeSource
-    {
-        public override string SourceName => environment.SourceName;
-
-        protected override IEnumerable<DeclaredResource> Declarations
-        {
-            get
-            {
-                ServiceCollection services = new();
-                environment.ComposeServices(services);
-
-                IEnumerable<Type> serviceTypes = services
-                    .Where(static descriptor => !descriptor.IsKeyedService)
-                    .Select(static descriptor => descriptor.ServiceType)
-                    .Concat(environment.PackServiceTypes());
-
-                foreach (string name in serviceTypes.Select(MockHost.ResourceName).Distinct(StringComparer.Ordinal).OrderBy(static name => name, StringComparer.Ordinal))
-                {
-                    yield return new DeclaredResource { Kind = MockResourceKinds.HostKind, Identifier = name, Values = new Dictionary<ValueKey, string>(), DeclaredBy = $"mock host service '{name}'" };
-                }
-            }
-        }
-    }
-
-    private IReadOnlyList<Type> PackServiceTypes()
+    private (IReadOnlyList<ResourceNode> Nodes, IReadOnlySet<Type> ServiceTypes) Declare()
     {
         lock (this._gate)
         {
-            return [.. this._packTypeByService.Keys];
+            if (this._declaredNodes is not null && this._declaredServiceTypes is not null)
+            {
+                return (this._declaredNodes, this._declaredServiceTypes);
+            }
+
+            ServiceCollection services = new();
+            this._composeServices(services);
+            HashSet<Type> registered = RegisteredServiceTypes(services);
+
+            foreach ((Type serviceType, IncludedPack pack) in this._packsByService)
+            {
+                RefuseMismatchedPack(serviceType, pack, registered.Contains(serviceType));
+            }
+
+            IEnumerable<Type> serviceTypes = services
+                .Where(static descriptor => !descriptor.IsKeyedService)
+                .Select(static descriptor => descriptor.ServiceType)
+                .Concat(this._packsByService.Keys);
+
+            this._declaredNodes = new HostedServices(this.SourceName, serviceTypes).Nodes;
+            this._declaredServiceTypes = registered;
+            this._sealed = true;
+            return (this._declaredNodes, this._declaredServiceTypes);
         }
+    }
+
+    private static void RefuseMismatchedPack(Type serviceType, IncludedPack pack, bool registered)
+    {
+        if (!registered && !pack.Additional)
+        {
+            throw new FrameworkConfigurationException(
+                $"'{pack.PackType.Name}' replaces '{serviceType.Name}', but the composition handed to MockEnvironment.For never registers '{serviceType.Name}'.")
+            {
+                RecoverySteps =
+                [
+                    $"Check that the composition registers '{serviceType.Name}' - a renamed or moved dependency is the usual cause.",
+                    $"To add the double as a service the composition lacks, include it with IncludeAdditional<{pack.PackType.Name}>().",
+                ],
+            };
+        }
+
+        if (registered && pack.Additional)
+        {
+            throw new FrameworkConfigurationException(
+                $"'{pack.PackType.Name}' was included as additional, but the composition already registers '{serviceType.Name}'.")
+            {
+                RecoverySteps = [$"Include it with Include<{pack.PackType.Name}>(), so it replaces that registration."],
+            };
+        }
+    }
+
+    private static HashSet<Type> RegisteredServiceTypes(IServiceCollection services)
+        => [.. services.Select(static descriptor => descriptor.ServiceType)];
+
+    private static string Describe(IEnumerable<Type> types)
+    {
+        string[] names = [.. types.Select(static type => $"'{type.Name}'").OrderBy(static name => name, StringComparer.Ordinal)];
+        return names.Length == 0 ? "none" : string.Join(", ", names);
+    }
+
+    private sealed record IncludedPack(Type PackType, bool Additional);
+
+    private sealed class HostedServices(string sourceName, IEnumerable<Type> serviceTypes) : DeclaredNodeSource
+    {
+        public override string SourceName => sourceName;
+
+        protected override IEnumerable<DeclaredResource> Declarations
+            => serviceTypes
+                .Select(MockHost.ResourceName)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(static name => name, StringComparer.Ordinal)
+                .Select(name => new DeclaredResource { Kind = MockResourceKinds.HostKind, Identifier = name, Values = new Dictionary<ValueKey, string>(), DeclaredBy = $"mock host service '{name}'" });
     }
 }

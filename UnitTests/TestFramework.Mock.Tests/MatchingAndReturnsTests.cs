@@ -107,12 +107,19 @@ public class MatchingAndReturnsTests
     }
 
     [Fact]
-    public void NonInterfaceService_IsRefusedByName()
+    public void NonInterfaceService_IsRefusedByName_WhenThePackIsIncluded()
     {
-        InlinePack<FileStoreBase> pack = new(m => { });
-
-        FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() => pack.Create());
+        // At the line that includes it, not when a run starts: nothing about a class service changes later.
+        FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(
+            () => MockEnvironment.For(_ => { }).Include<ClassServicePack>());
         Assert.Contains(nameof(FileStoreBase), refusal.Message);
         Assert.Contains("interface", refusal.Message);
+    }
+
+    private sealed class ClassServicePack : MockDefinition<FileStoreBase>
+    {
+        protected override void Configure(MockBuilder<FileStoreBase> mock)
+        {
+        }
     }
 }
