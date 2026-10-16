@@ -35,7 +35,7 @@ internal sealed class MockHostEnvComponent : EnvComponent
         ServiceCollection services = this._owner.ComposeServicesForRun();
 
         Dictionary<Type, MockInstanceGeneric> instances = [];
-        foreach (MockDefinitionGeneric pack in this._owner.CreatePacksForRun())
+        foreach (MockPackGeneric pack in this._owner.CreatePacksForRun())
         {
             MockInstanceGeneric instance = pack.CreateInstanceGeneric(context);
             string service = instance.ServiceType.FullName ?? instance.ServiceType.Name;

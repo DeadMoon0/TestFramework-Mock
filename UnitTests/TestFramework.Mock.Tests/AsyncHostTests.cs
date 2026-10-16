@@ -38,7 +38,7 @@ public class AsyncHostTests(ITestOutputHelper output)
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.True(run.MockResult<bool>("save"));
+        Assert.True(run.HostResult<bool>("save"));
         Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.CreateFile("report.txt")));
     }
 

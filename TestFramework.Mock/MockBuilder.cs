@@ -9,7 +9,7 @@ using TestFramework.Mock.Matching;
 namespace TestFramework.Mock;
 
 /// <summary>
-/// What a <see cref="MockDefinition{TService}"/> configures against. Collected setups leave only
+/// What a <see cref="MockPack{TService}"/> configures against. Collected setups leave only
 /// through <see cref="BuildSetups"/>, which is also where a setup that returns a value but
 /// states none is refused — at instance creation, before anything runs.
 /// </summary>

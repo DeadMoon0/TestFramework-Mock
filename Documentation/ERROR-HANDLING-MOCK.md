@@ -37,7 +37,7 @@ it without re-running the test.
 | the system under test calls a double | the run has already finished | none: the double answers, the call is not recorded, and the run's log says so |
 | a find or a later look | two doubles published the same identity | `FrameworkConfigurationException` |
 | reading the finished run | `run.Mock<T>()` for a service no pack replaced | `FrameworkConfigurationException` |
-| reading the finished run | `run.MockResult<T>(label)` with a type the step did not return | `FrameworkConfigurationException` |
+| reading the finished run | `run.HostResult<T>(label)` with a type the step did not return | `FrameworkConfigurationException` |
 
 Not an error: a `MockArtifactFinder` whose identity nothing has published yet. It finds nothing and logs a
 warning, like any empty finder.

@@ -12,7 +12,7 @@ and debugging UI are the same ones the rest of the framework uses.
 
 ## Packages
 
-- `TestFramework.Mock`: Mock-Packs, the in-process mock host, the `Host` trigger and the mock artifact
+- `TestFramework.Mock`: packs, the in-process mock host, the `Host` trigger and the mock artifact
   finder
 
 ## Install
@@ -35,7 +35,7 @@ work either way; only `dotnet pack` needs the submodule.
 ## What It Does
 
 ```csharp
-public sealed class MailSenderPack : MockDefinition<IMailSender>
+public sealed class MailSenderPack : MockPack<IMailSender>
 {
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
@@ -59,7 +59,7 @@ Timeline timeline = Timeline.Create()
 TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();
 
 run.EnsureRanToCompletion();
-Assert.True(run.MockResult<bool>("register"));
+Assert.True(run.HostResult<bool>("register"));
 Assert.Equal(1, run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", MockArg.Any<string>())));
 ```
 

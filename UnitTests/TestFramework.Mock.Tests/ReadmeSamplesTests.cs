@@ -51,8 +51,8 @@ public sealed class SignupService(IMailSender mail)
     }
 }
 
-// Mirrors the Mock-Pack in the "Quick Start" of both READMEs.
-public sealed class MailSenderPack : MockDefinition<IMailSender>
+// Mirrors the pack in the "Quick Start" of both READMEs.
+public sealed class MailSenderPack : MockPack<IMailSender>
 {
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
@@ -82,7 +82,7 @@ public class ReadmeSamplesTests
         TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.True(run.MockResult<bool>("register"));
+        Assert.True(run.HostResult<bool>("register"));
         Assert.Equal(1, run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", MockArg.Any<string>())));
         Assert.Equal("ada@example.com: Welcome", run.ArtifactStore.GetMockArtifact("sentMail").Last.Payload);
     }
@@ -156,7 +156,7 @@ public class ReadmeSamplesTests
         TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.True(run.MockResult<bool>("register"));
+        Assert.True(run.HostResult<bool>("register"));
     }
 
     [Fact]

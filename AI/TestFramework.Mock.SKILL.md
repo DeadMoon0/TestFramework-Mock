@@ -4,16 +4,16 @@
 </identity>
 
 <objective>
-    Explain how TestFramework.Mock tests the system under test in-process: declaring test doubles as Mock-Packs, hosting the application's own service composition with MockEnvironment, calling into it with MockExt.Host, bringing what doubles recorded into the run with Core's FindArtifact, and verifying calls from the frozen run.
+    Explain how TestFramework.Mock tests the system under test in-process: declaring test doubles as packs, hosting the application's own service composition with MockEnvironment, calling into it with MockExt.Host, bringing what doubles recorded into the run with Core's FindArtifact, and verifying calls from the frozen run.
 </objective>
 
 <package_scope>
-    Covers Mock-Packs (MockDefinition), the setup verbs, the in-process mock host, the Host trigger including async calls, the mock artifact finder, and the post-run reads. Does not cover HTTP hosting, class mocking, or anything outside the test process.
+    Covers packs (MockPack), the setup verbs, the in-process mock host, the Host trigger including async calls, the mock artifact finder, and the post-run reads. Does not cover HTTP hosting, class mocking, or anything outside the test process.
 </package_scope>
 
 <key_concepts>
     Mock is an environment like any other: MockEnvironment is an environment provider whose one component hosts the application's services for the length of a run.
-    A Mock-Pack (MockDefinition<TService>) is one immutable declaration of a double; it is instantiated per run, so runs never share doubles, call logs or records.
+    A pack (MockPack<TService>) is one immutable declaration of a double; it is instantiated per run, so runs never share doubles, call logs or records.
     MockEnvironment.For(services => ...) takes the registrations production makes; Include<TPack>() removes every registration of the pack's service and adds the run's double as a singleton.
     MockExt.Host resolves the system under test from the host and calls it; the hosted service arrives behind the call's own arguments, which can be bound from run variables.
     A double never writes into the run. ProducesArtifact and Publish record a payload under an identity in the environment; a timeline brings it in with FindArtifact(identity, new MockArtifactFinder(identity)) and takes later looks with CaptureArtifactVersion(identity).
@@ -22,18 +22,18 @@
 </key_concepts>
 
 <best_practices>
-    Declare one named MockDefinition class per replaced service and reuse it across tests.
+    Declare one named MockPack class per replaced service and reuse it across tests.
     Hand MockEnvironment.For the same registration code production uses, instead of rebuilding the composition in the test.
     Use MockArg.Any<T>() for arguments the test does not care about and exact values for the ones it does; keep setups from overlapping.
     Return Task or Task<T> from Host lambdas for async services; the step then finishes when the call does.
     Give every published identity a name that says what it is, and one identity per pack.
-    Assert on calls with run.Mock<T>().CountCalls(...) and on returned values with run.MockResult<T>(label).
+    Assert on calls with run.Mock<T>().CountCalls(...) and on returned values with run.HostResult<T>(label).
     Label Host steps with .Label(...) so their results can be read after the run.
 </best_practices>
 
 <api_hints>
     Important APIs and shapes:
-    - class XPack : MockDefinition<IService> { protected override void Configure(MockBuilder<IService> mock) { ... } }
+    - class XPack : MockPack<IService> { protected override void Configure(MockBuilder<IService> mock) { ... } }
     - mock.Call(s => s.Method(MockArg.Any<string>(), "exact")) for value-returning and void calls
     - setup verbs: Returns(value), Returns((a, b) => ...), Throws(exception), Callback((a, b) => ...), Compute((a, b, artifacts) => ...), ProducesArtifact((a, b) => new(identity, payload)), Assigns("name", value), Assigns("name", (a, b) => ...)
     - out and ref positions take MockArg.Ref<T>.Any: mock.Call(s => s.TryGet("key", out MockArg.Ref<string>.Any)).Returns(true).Assigns("value", "hello")
@@ -46,7 +46,7 @@
     - MockExt.Host((Service s) => s.VoidMethod()) for synchronous void methods
     - .FindArtifact("identity", new MockArtifactFinder("identity")) and .CaptureArtifactVersion("identity")
     - run.Mock<IService>() -> MockInstance<IService>: CountCalls(...), RecordedCalls
-    - run.MockResult<T>("label")
+    - run.HostResult<T>("label")
     - run.ArtifactStore.GetMockArtifact("identity") -> versions whose Payload is what was published
 
     Behavioral hint:
@@ -124,7 +124,7 @@
 
 <important_type_map>
     Common type map for discovery and error interpretation:
-    - MockDefinition<TService>: a Mock-Pack
+    - MockPack<TService>: a pack
     - MockBuilder<TService>: what Configure receives; Call(...) declares a setup
     - MockCallSetup<TService, TResult> / MockCallSetup<TService>: one setup's verbs
     - MockArg: argument matchers for Call expressions
@@ -134,7 +134,7 @@
     - MockHostCallTrigger<TService, TResult> / MockHostCallTrigger<TService>: the steps behind Host
     - MockArtifactFinder: finds a published identity for FindArtifact
     - MockInstance<TService>: a run's double, its logs closed with the run; CountCalls, RecordedCalls
-    - MockRunExtensions: Mock<T>(), MockResult<T>(label), GetMockArtifact(identifier)
+    - MockRunExtensions: Mock<T>(), HostResult<T>(label), GetMockArtifact(identifier)
 
     Discovery heuristics for the agent:
     - "No setup matches" means the pack lacks a setup for a call the system under test made.
@@ -152,7 +152,7 @@
 
 <grounding_files>
     Most important files for expert grounding, relative to the repository root:
-    - TestFramework.Mock/MockDefinition.cs
+    - TestFramework.Mock/MockPack.cs
     - TestFramework.Mock/MockBuilder.cs
     - TestFramework.Mock/MockInstance.cs
     - TestFramework.Mock/Setup/MockCallSetupBase.cs

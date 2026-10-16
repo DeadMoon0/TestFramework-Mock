@@ -96,7 +96,7 @@ public sealed class UnreachableFileStore : IFileStore
 /// <summary>
 /// The pack under test: answers CreateFile and captures the path as an artifact.
 /// </summary>
-public sealed class FileStorePack : MockDefinition<IFileStore>
+public sealed class FileStorePack : MockPack<IFileStore>
 {
     protected override void Configure(MockBuilder<IFileStore> mock)
     {
@@ -110,7 +110,7 @@ public sealed class FileStorePack : MockDefinition<IFileStore>
 /// <summary>
 /// A second pack for the same service, so the duplicate refusal has something to refuse.
 /// </summary>
-public sealed class OtherFileStorePack : MockDefinition<IFileStore>
+public sealed class OtherFileStorePack : MockPack<IFileStore>
 {
     protected override void Configure(MockBuilder<IFileStore> mock)
     {
@@ -151,7 +151,7 @@ public sealed class FlushingReportService(IFileStore files) : IDisposable
 /// A pack that keeps state in a field: it answers true only the first time its Configure runs. Shared
 /// between runs, the second run would be answered false.
 /// </summary>
-public sealed class CountingPack : MockDefinition<IFileStore>
+public sealed class CountingPack : MockPack<IFileStore>
 {
     private int _configured;
 
@@ -166,7 +166,7 @@ public sealed class CountingPack : MockDefinition<IFileStore>
 /// <summary>
 /// A pack for a second service, for refusals that need a pack other than the one already included.
 /// </summary>
-public sealed class AuditLogPack : MockDefinition<IAuditLog>
+public sealed class AuditLogPack : MockPack<IAuditLog>
 {
     protected override void Configure(MockBuilder<IAuditLog> mock)
     {

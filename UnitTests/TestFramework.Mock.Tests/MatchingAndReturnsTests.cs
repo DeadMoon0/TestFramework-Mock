@@ -116,7 +116,7 @@ public class MatchingAndReturnsTests
         Assert.Contains("interface", refusal.Message);
     }
 
-    private sealed class ClassServicePack : MockDefinition<FileStoreBase>
+    private sealed class ClassServicePack : MockPack<FileStoreBase>
     {
         protected override void Configure(MockBuilder<FileStoreBase> mock)
         {

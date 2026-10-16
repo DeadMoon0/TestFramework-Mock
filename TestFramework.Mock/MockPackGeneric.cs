@@ -4,13 +4,13 @@ using TestFramework.Core.Steps;
 namespace TestFramework.Mock;
 
 /// <summary>
-/// The untyped view of a Mock-Pack, so the environment can hold packs for different services in
+/// The untyped view of a pack, so the environment can hold packs for different services in
 /// one list. Nobody derives this directly — the constructor is reachable only from
-/// <see cref="MockDefinition{TService}"/>, which is the authoring surface.
+/// <see cref="MockPack{TService}"/>, which is the authoring surface.
 /// </summary>
-public abstract class MockDefinitionGeneric
+public abstract class MockPackGeneric
 {
-    private protected MockDefinitionGeneric()
+    private protected MockPackGeneric()
     {
     }
 

@@ -44,7 +44,7 @@ public static class MockRunExtensions
     /// <param name="run">The run.</param>
     /// <param name="label">The step label.</param>
     /// <returns>The returned value.</returns>
-    public static TResult MockResult<TResult>(this TimelineRun run, string label)
+    public static TResult HostResult<TResult>(this TimelineRun run, string label)
     {
         ArgumentNullException.ThrowIfNull(run);
 

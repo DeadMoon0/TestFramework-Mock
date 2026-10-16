@@ -54,7 +54,7 @@ public class HostCallTests(ITestOutputHelper output)
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.True(run.MockResult<bool>("token"));
+        Assert.True(run.HostResult<bool>("token"));
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class HostCallTests(ITestOutputHelper output)
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.NotEqual(run.MockResult<Guid>("first"), run.MockResult<Guid>("second"));
-        Assert.Equal(2, run.MockResult<int>("disposed"));
+        Assert.NotEqual(run.HostResult<Guid>("first"), run.HostResult<Guid>("second"));
+        Assert.Equal(2, run.HostResult<int>("disposed"));
     }
 
     [Fact]
@@ -103,10 +103,10 @@ public class HostCallTests(ITestOutputHelper output)
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
         run.EnsureRanToCompletion();
 
-        FrameworkConfigurationException wrongType = Assert.Throws<FrameworkConfigurationException>(() => run.MockResult<string>("save"));
+        FrameworkConfigurationException wrongType = Assert.Throws<FrameworkConfigurationException>(() => run.HostResult<string>("save"));
         Assert.Contains("MockCallResult<Boolean>", wrongType.Message);
 
-        FrameworkConfigurationException noValue = Assert.Throws<FrameworkConfigurationException>(() => run.MockResult<bool>("remove"));
+        FrameworkConfigurationException noValue = Assert.Throws<FrameworkConfigurationException>(() => run.HostResult<bool>("remove"));
         Assert.Contains("EmptyStepResultContext", noValue.Message);
     }
 }

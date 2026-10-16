@@ -37,7 +37,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         TimelineRun run = await _timeline.SetupRun(null, output.WriteLine).SetEnv(CreateEnvironment()).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.True(run.MockResult<bool>("save"));
+        Assert.True(run.HostResult<bool>("save"));
         Assert.Equal(1, run.Mock<IFileStore>().CountCalls(f => f.CreateFile("report.txt")));
     }
 
@@ -145,7 +145,7 @@ public class MockEnvironmentTests(ITestOutputHelper output)
         TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
 
         run.EnsureRanToCompletion();
-        Assert.Equal("repository of String", run.MockResult<string>("describe"));
+        Assert.Equal("repository of String", run.HostResult<string>("describe"));
     }
 
     [Fact]
@@ -187,8 +187,8 @@ public class MockEnvironmentTests(ITestOutputHelper output)
 
         first.EnsureRanToCompletion();
         second.EnsureRanToCompletion();
-        Assert.True(first.MockResult<bool>("save"));
-        Assert.True(second.MockResult<bool>("save"));
+        Assert.True(first.HostResult<bool>("save"));
+        Assert.True(second.HostResult<bool>("save"));
     }
 
     [Fact]

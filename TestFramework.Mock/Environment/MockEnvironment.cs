@@ -12,7 +12,7 @@ namespace TestFramework.Mock;
 
 /// <summary>
 /// The environment that hosts the system under test in-process: the user's own service
-/// composition, with each included Mock-Pack's double standing where the real dependency would.
+/// composition, with each included pack's double standing where the real dependency would.
 /// The host is created per run, so recordings, published artifacts and the composed provider are
 /// run-isolated and parallel runs never share state.
 /// </summary>
@@ -21,7 +21,7 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     private readonly Action<IServiceCollection> _composeServices;
     private readonly object _gate = new();
     private readonly Dictionary<Type, IncludedPack> _packsByService = [];
-    private readonly List<Func<MockDefinitionGeneric>> _packFactories = [];
+    private readonly List<Func<MockPackGeneric>> _packFactories = [];
     private IReadOnlyList<ResourceNode>? _declaredNodes;
     private IReadOnlySet<Type>? _declaredServiceTypes;
     private bool _sealed;
@@ -51,7 +51,7 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     }
 
     /// <summary>
-    /// Includes one Mock-Pack, standing in for a service the composition registers. Including the same
+    /// Includes one pack, standing in for a service the composition registers. Including the same
     /// pack again is idempotent; a second pack replacing the same service is refused naming both, because
     /// a container would hand out the later one and the earlier would vanish silently. Every pack is
     /// included before the first run that uses this environment; after that the environment is sealed, so
@@ -64,11 +64,11 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     /// <see cref="IncludeAdditional{TPack}"/>.
     /// </remarks>
     public MockEnvironment Include<TPack>()
-        where TPack : MockDefinitionGeneric, new()
+        where TPack : MockPackGeneric, new()
         => this.Add<TPack>(additional: false);
 
     /// <summary>
-    /// Includes one Mock-Pack for a service the composition does not register, adding the double as that
+    /// Includes one pack for a service the composition does not register, adding the double as that
     /// service. Everything else is as <see cref="Include{TPack}"/>.
     /// </summary>
     /// <remarks>
@@ -76,11 +76,11 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     /// is what <see cref="Include{TPack}"/> says.
     /// </remarks>
     public MockEnvironment IncludeAdditional<TPack>()
-        where TPack : MockDefinitionGeneric, new()
+        where TPack : MockPackGeneric, new()
         => this.Add<TPack>(additional: true);
 
     private MockEnvironment Add<TPack>(bool additional)
-        where TPack : MockDefinitionGeneric, new()
+        where TPack : MockPackGeneric, new()
     {
         TPack probe = new();
 
@@ -112,7 +112,7 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
                 throw new FrameworkConfigurationException(
                     $"Two packs replace '{serviceType.Name}': '{existing.PackType.Name}' and '{typeof(TPack).Name}'.")
                 {
-                    RecoverySteps = ["Keep one pack per service; merge the setups into one definition if both behaviours are meant."],
+                    RecoverySteps = ["Keep one pack per service; merge the setups into one pack if both behaviours are meant."],
                 };
             }
 
@@ -131,7 +131,7 @@ public sealed class MockEnvironment : EnvironmentProviderBase, IResourceNodeSour
     /// This run's packs, each newly made. Seals the environment: from the first run on, what it hosts
     /// cannot change underneath the runs that use it.
     /// </summary>
-    internal IReadOnlyList<MockDefinitionGeneric> CreatePacksForRun()
+    internal IReadOnlyList<MockPackGeneric> CreatePacksForRun()
     {
         lock (this._gate)
         {

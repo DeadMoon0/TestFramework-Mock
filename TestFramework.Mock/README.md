@@ -7,7 +7,7 @@ dependencies replaced by declared test doubles, and drives it from a timeline. W
 becomes run artifacts through Core's ordinary finder verb, and the frozen run says which doubles it ran
 against.
 
-The public entry points are `MockDefinition<TService>` (a Mock-Pack), `MockEnvironment`, `MockExt.Host`
+The public entry points are `MockPack<TService>` (a pack), `MockEnvironment`, `MockExt.Host`
 and `MockArtifactFinder`.
 
 ## Install
@@ -18,13 +18,13 @@ dotnet add package TestFramework.Mock
 
 ## Quick Start
 
-A Mock-Pack declares one double, once:
+A pack declares one double, once:
 
 ```csharp
 using System.Threading.Tasks;
 using TestFramework.Mock;
 
-public sealed class MailSenderPack : MockDefinition<IMailSender>
+public sealed class MailSenderPack : MockPack<IMailSender>
 {
     protected override void Configure(MockBuilder<IMailSender> mock)
     {
@@ -58,7 +58,7 @@ Timeline timeline = Timeline.Create()
 TimelineRun run = await timeline.SetupRun().SetEnv(environment).RunAsync();
 
 run.EnsureRanToCompletion();
-bool registered = run.MockResult<bool>("register");
+bool registered = run.HostResult<bool>("register");
 int sent = run.Mock<IMailSender>().CountCalls(m => m.SendAsync("ada@example.com", MockArg.Any<string>()));
 object? mail = run.ArtifactStore.GetMockArtifact("sentMail").Last.Payload;   // "ada@example.com: Welcome"
 ```
@@ -72,7 +72,7 @@ Mock is an environment like any other. Three pieces, each with one job:
 
 | Piece | What it is | Lifetime |
 |---|---|---|
-| **Mock-Pack** — `MockDefinition<TService>` | one immutable declaration of a double: which calls it answers and how | declared once, instantiated per run |
+| **pack** — `MockPack<TService>` | one immutable declaration of a double: which calls it answers and how | declared once, instantiated per run |
 | **`MockEnvironment`** | hosts your service composition with each included pack's double standing in | one host per run, frozen and disposed with it |
 | **Timeline verbs** — `MockExt.Host`, `FindArtifact` | call the hosted system under test; bring what a double recorded into the run | steps of the timeline |
 
@@ -82,7 +82,7 @@ real dependency would leave a file or a row — and a timeline step brings that 
 logs close with it: they are a snapshot from then on, and a late call is answered but not recorded - the run's
 log says so - rather than thrown into the system under test.
 
-## Writing A Mock-Pack
+## Writing A pack
 
 A setup names one call on the service. Arguments are matched by value, or by `MockArg.Any<T>()`:
 
@@ -247,7 +247,7 @@ TimelineRun run = await timeline.SetupRun()
 - Every call runs in a scope of its own, the way production opens one per request: scoped services are
   created fresh for the call and disposed when it ends, singletons are shared across the run. A result
   that still needs a scoped service after the call — a lazily loaded entity, say — is read inside the call.
-- `run.MockResult<T>(label)` reads what a labelled `Host` step returned, with `T` the call's own return
+- `run.HostResult<T>(label)` reads what a labelled `Host` step returned, with `T` the call's own return
   type — for an awaited call, what its task yields.
 
 ## Artifacts From Calls

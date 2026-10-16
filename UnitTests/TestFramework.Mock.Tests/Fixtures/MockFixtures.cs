@@ -82,7 +82,7 @@ public abstract class FileStoreBase
 /// <summary>
 /// Lets a test state a pack inline; real packs are one named class per definition.
 /// </summary>
-public sealed class InlinePack<TService> : MockDefinition<TService>
+public sealed class InlinePack<TService> : MockPack<TService>
     where TService : class
 {
     private readonly Action<MockBuilder<TService>> _configure;

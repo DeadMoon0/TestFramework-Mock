@@ -9,12 +9,12 @@ using TestFramework.Core.Steps;
 namespace TestFramework.Mock;
 
 /// <summary>
-/// One immutable declaration of a test double — the Mock-Pack. A definition says nothing about
+/// One immutable declaration of a test double — the pack. A definition says nothing about
 /// which run it serves: it is instantiated per run, so recordings and published artifacts are
 /// run-isolated and parallel runs never share state.
 /// </summary>
 /// <typeparam name="TService">The service the pack replaces.</typeparam>
-public abstract class MockDefinition<TService> : MockDefinitionGeneric
+public abstract class MockPack<TService> : MockPackGeneric
     where TService : class
 {
     internal sealed override Type ServiceType => typeof(TService);

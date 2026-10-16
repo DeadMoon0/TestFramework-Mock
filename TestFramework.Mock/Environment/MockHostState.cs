@@ -48,7 +48,7 @@ public sealed class MockHostState
         throw new FrameworkConfigurationException(
             $"No pack in this run replaces '{typeof(TService).Name}'.")
         {
-            RecoverySteps = ["Include a MockDefinition for the service on the MockEnvironment."],
+            RecoverySteps = ["Include a MockPack for the service on the MockEnvironment."],
             AvailableOptions = [.. this._instances.Keys.Select(type => type.Name)],
         };
     }

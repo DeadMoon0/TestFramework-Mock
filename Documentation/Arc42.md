@@ -11,7 +11,7 @@ dependencies, and lets a timeline call into it and inspect what happened.
 Primary goals:
 
 - test the application's real composition, not a hand-rebuilt copy of it
-- declare a test double once, as an immutable Mock-Pack, and reuse it across tests
+- declare a test double once, as an immutable pack, and reuse it across tests
 - keep every run isolated: its own host, its own doubles, its own call logs
 - make misuse a stated failure at the earliest point: when the timeline is built, when a pack is
   instantiated, or when the offending call arrives
@@ -31,7 +31,7 @@ Primary goals:
 ## 3. System Scope and Context
 
 - `TestFramework.Core`: runs the timeline, owns the run's stores, freezing, retries and timeouts
-- test authors: write Mock-Packs, compose a `MockEnvironment`, and drive it with `MockExt.Host`
+- test authors: write packs, compose a `MockEnvironment`, and drive it with `MockExt.Host`
 - the system under test: the author's own classes, resolved from their own registrations
 - `Microsoft.Extensions.DependencyInjection`: builds the per-run service provider
 
@@ -48,14 +48,14 @@ that leaves the process.
   into the run with Core's `FindArtifact` and `CaptureArtifactVersion` — the same verbs used for a file
   another program wrote. Whether something is a new artifact or a new version is therefore Core's, stated
   by where the timeline looks, and never the pack's.
-- **Declarations are immutable; instances are per run.** A Mock-Pack is instantiated once per run, so
+- **Declarations are immutable; instances are per run.** A pack is instantiated once per run, so
   recordings are run-isolated and parallel runs share nothing.
 - **Refuse rather than guess.** Unmatched calls, ambiguous matches, missing results, unreachable artifacts,
   duplicate packs and ambiguous identities are all stated failures that name what exists.
 
 ## 5. Building Block View
 
-- `MockDefinition<TService>` / `MockBuilder<TService>`: the authoring surface of a Mock-Pack
+- `MockPack<TService>` / `MockBuilder<TService>`: the authoring surface of a pack
 - `MockCallSetup<TService, TResult>` / `MockCallSetup<TService>`: one setup's verbs; the per-argument-count
   overloads are generated from `MockCallSetup.Arities.tt`
 - `MockArg`, `CallPattern`, `CallPatternParser`: read a `m => m.Method(...)` expression into a matcher per
@@ -72,7 +72,7 @@ that leaves the process.
   record of the latest payload per identity
 - `MockArtifactFinder` and the `MockCaptured…` artifact triple: find a recorded identity for Core's
   `FindArtifact`, and re-resolve it for `CaptureArtifactVersion`
-- `MockRunExtensions`: reads over the finished run — `Mock<T>()`, `MockResult<T>(label)`,
+- `MockRunExtensions`: reads over the finished run — `Mock<T>()`, `HostResult<T>(label)`,
   `GetMockArtifact(identifier)`
 
 ## 6. Runtime View
@@ -153,7 +153,7 @@ executed inside the test host process. There is no service deployment unit.
 
 ## 12. Glossary
 
-- Mock-Pack: one immutable declaration of a test double, `MockDefinition<TService>`
+- pack: one immutable declaration of a test double, `MockPack<TService>`
 - Double: one run's live instance of a pack, standing in for the service
 - Setup: one call pattern a pack answers, with its result and artifact producers
 - Mock host: the per-run service provider the environment builds
