@@ -17,7 +17,6 @@
 		<RepositoryType>git</RepositoryType>
 		<Copyright>Copyright (c) DeadMoon0 2026</Copyright>
 		<PackageReleaseNotes>BREAKING - needs TestFramework.Core 0.7.0. MockDefinition&lt;T&gt; is renamed MockPack&lt;T&gt;, and run.MockResult&lt;T&gt;(label) is run.HostResult&lt;T&gt;(label). Include refuses a pack whose service the composition never registers; use IncludeAdditional to add one. Synchronous Host calls can take the step's CancellationToken too. A pack is checked when it is included, not when the run starts. A double called after its run has finished still answers but no longer throws, and the call is not recorded; the run's log says so. The call and artifact logs now finish with the run rather than with the mock host's teardown. RecordedCall, MockCallResult and MockCapturedArtifactReference are built by Mock only, and a recorded call's arguments can no longer be edited. A ProducesArtifact that throws after an async call now fails the caller's await, as it fails a synchronous call. New: out and ref parameters, set up with MockArg.Ref&lt;T&gt;.Any and written back with Assigns; every out parameter must be assigned.</PackageReleaseNotes>
-		<PackageIconSourcePath>$(MSBuildThisFileDirectory)..\Modules\TestFramework-Common\Assets\Icon.png</PackageIconSourcePath>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -52,10 +51,5 @@
 			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
-
-	<Target Name="EnsurePackageIconSubmoduleIsInitialized" BeforeTargets="GenerateNuspec">
-		<Error Condition="!Exists('$(PackageIconSourcePath)')"
-		       Text="The package icon &quot;$(PackageIconSourcePath)&quot; is missing because the TestFramework-Common submodule is not checked out. Run 'git submodule update --init --recursive' in the repository root and pack again." />
-	</Target>
 
 </Project>
