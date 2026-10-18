@@ -7,7 +7,7 @@ namespace TestFramework.Mock;
 /// <remarks>
 /// Every <c>Host</c> overload is generated per argument count (see <c>MockExt.Arities.tt</c>): a
 /// synchronous result, an awaited <c>Task&lt;T&gt;</c>, an awaited <c>Task</c>, a synchronous void call,
-/// and the two awaited shapes with the step's cancellation token. Each call runs in a scope of its own,
+/// and all four again with the step's cancellation token. Each call runs in a scope of its own,
 /// the way production opens one per request.
 /// </remarks>
 public static partial class MockExt

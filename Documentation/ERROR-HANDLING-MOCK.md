@@ -34,9 +34,12 @@ it without re-running the test.
 | a `Host` step runs | the service is registered but the container cannot build it (the container's message is carried in full) | `FrameworkConfigurationException` |
 | the system under test calls a double | no setup matches the call | `FrameworkConfigurationException` |
 | the system under test calls a double | more than one setup matches the call | `FrameworkConfigurationException` |
+| the system under test calls a double | a setup body or `ProducesArtifact` publishes a null artifact | `FrameworkConfigurationException` |
 | the system under test calls a double | the run has already finished | none: the double answers, the call is not recorded, and the run's log says so |
 | a find or a later look | two doubles published the same identity | `FrameworkConfigurationException` |
 | reading the finished run | `run.Mock<T>()` for a service no pack replaced | `FrameworkConfigurationException` |
+| reading the finished run | `run.Mock<T>()` on a run that had no mock host at all | `FrameworkConfigurationException` |
+| the run sets up artifacts | a captured mock artifact is set up by the run (`SetupArtifact`) instead of found | `FrameworkConfigurationException` |
 | reading the finished run | `run.HostResult<T>(label)` with a type the step did not return | `FrameworkConfigurationException` |
 
 Not an error: a `MockArtifactFinder` whose identity nothing has published yet. It finds nothing and logs a

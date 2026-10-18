@@ -46,12 +46,6 @@ internal sealed class AnyMatcher : IArgMatcher
 }
 
 /// <summary>
-/// Matches exactly one value. Materialised collections - arrays, lists - compare by their elements in
-/// order, because two equal byte arrays are the same argument to anyone reading the setup; a lazy
-/// sequence keeps reference equality, since enumerating it here would consume what the system under
-/// test passed.
-/// </summary>
-/// <summary>
 /// An out position: a call brings no value for it, so every call matches it.
 /// </summary>
 internal sealed class OutMatcher : IArgMatcher
@@ -74,6 +68,12 @@ internal sealed class OutMatcher : IArgMatcher
     }
 }
 
+/// <summary>
+/// Matches exactly one value. Materialised collections - arrays, lists - compare by their elements in
+/// order, because two equal byte arrays are the same argument to anyone reading the setup; a lazy
+/// sequence keeps reference equality, since enumerating it here would consume what the system under
+/// test passed.
+/// </summary>
 internal sealed class ExactMatcher : IArgMatcher
 {
     private readonly object? _expected;

@@ -111,6 +111,7 @@ public class ByRefParameterTests
     [Theory]
     [InlineData("missing")]
     [InlineData("key")]
+    [InlineData("")]
     public void AssignsRefusesANameThatIsNotAnOutOrRefParameter(string name)
     {
         FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() =>
@@ -151,6 +152,22 @@ public class ByRefParameterTests
             m.Call(s => s.TryGet(MockArg.Any<string>(), out MockArg.Ref<string>.Any))
                 .Returns((string key) => key == "bad" ? throw new InvalidOperationException("refused") : true)
                 .Assigns("value", "written")).Create();
+
+        string value = "before";
+        Assert.Throws<InvalidOperationException>(() => mock.Object.TryGet("bad", out value));
+
+        Assert.Equal("before", value);
+    }
+
+    [Fact]
+    public void ACallWhoseArtifactCannotBeProducedWritesNothingBack()
+    {
+        // The call throws from its producer rather than its result; to the caller it is the same failed call.
+        MockInstance<IKeyStore> mock = new InlinePack<IKeyStore>(m =>
+            m.Call(s => s.TryGet(MockArg.Any<string>(), out MockArg.Ref<string>.Any))
+                .Returns(true)
+                .Assigns("value", "written")
+                .ProducesArtifact((string key) => key == "bad" ? throw new InvalidOperationException("refused") : new("found", key))).Create();
 
         string value = "before";
         Assert.Throws<InvalidOperationException>(() => mock.Object.TryGet("bad", out value));

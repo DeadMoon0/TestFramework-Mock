@@ -90,19 +90,21 @@ public abstract class MockCallSetupBase
 
         // The result runs first: a declared artifact is what a completed call produced, so a
         // call that throws is never assumed to have produced it. What a body published by hand
-        // before throwing stands — those publishes happened. The write-backs are computed before any
-        // of them land, so one that throws leaves the caller's variables as they were.
+        // before throwing stands — those publishes happened. The write-backs are computed, and a
+        // synchronous call's producers run, before any of them land: whatever throws on the way
+        // leaves the caller's variables as they were.
         object? result = this._response is null ? null : this._response(incoming, artifacts);
 
         List<KeyValuePair<int, object?>> values = [.. this._assignments.Select(assignment => KeyValuePair.Create(assignment.Key, assignment.Value(incoming)))];
-        foreach (KeyValuePair<int, object?> value in values)
-        {
-            writeBack(value.Key, value.Value);
-        }
 
         if (this._artifactProducers.Count > 0)
         {
             result = this.ProduceWhenCompleted(result, () => this.RunProducers(incoming, artifacts));
+        }
+
+        foreach (KeyValuePair<int, object?> value in values)
+        {
+            writeBack(value.Key, value.Value);
         }
 
         return result;
@@ -125,8 +127,8 @@ public abstract class MockCallSetupBase
     private protected void AddAssignment(string parameter, Type valueType, Func<object?[], object?> compute)
     {
         this.EnsureOpen();
-        ArgumentException.ThrowIfNullOrWhiteSpace(parameter);
 
+        // An empty name is a typo like any other, and is refused the same way: by naming what can be written.
         ParameterInfo[] parameters = this.Pattern.Method.GetParameters();
         ParameterInfo? target = parameters.FirstOrDefault(candidate => string.Equals(candidate.Name, parameter, StringComparison.Ordinal));
         string[] writable = [.. parameters.Where(static candidate => candidate.ParameterType.IsByRef && !candidate.IsIn).Select(Describe)];

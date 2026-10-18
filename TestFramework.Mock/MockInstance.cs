@@ -15,8 +15,8 @@ namespace TestFramework.Mock;
 
 /// <summary>
 /// One run's live double: the proxy the system under test receives, the invocation log, and what
-/// its calls published. Freezes with the run — after that the log is a trustworthy
-/// snapshot and the proxy refuses further calls by name.
+/// its calls published. When the run finishes the log is closed: a later call is still answered,
+/// but not recorded, and the run's log says so.
 /// </summary>
 /// <typeparam name="TService">The mocked service.</typeparam>
 public sealed class MockInstance<TService> : MockInstanceGeneric

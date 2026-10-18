@@ -122,6 +122,21 @@ public class MockCompositionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task AServiceWhoseOwnConstructorFails_FailsTheStepWithItsOwnException()
+    {
+        // Not the container's failure, and not to be dressed as one: nothing is missing from the composition.
+        Timeline timeline = Timeline.Create()
+            .Trigger(MockExt.Host((RefusesToStart service) => service.Now())).Label("now")
+            .Build();
+        MockEnvironment environment = MockEnvironment.For(services => services.AddSingleton<RefusesToStart>());
+
+        TimelineRun run = await timeline.SetupRun(null, output.WriteLine).SetEnv(environment).RunAsync();
+
+        InvalidOperationException failure = Assert.IsType<InvalidOperationException>(run.Step("now").LastResult.Exception);
+        Assert.Equal("The system under test refused to start.", failure.Message);
+    }
+
+    [Fact]
     public async Task CallsMadeAtTheSameTime_AreEachRecordedOnce_InADistinctOrder()
     {
         // A system under test that fans work out calls its dependencies from several threads at once; every one
@@ -149,6 +164,13 @@ public class MockCompositionTests(ITestOutputHelper output)
     public interface IClock
     {
         DateTimeOffset Now { get; }
+    }
+
+    public sealed class RefusesToStart
+    {
+        public RefusesToStart() => throw new InvalidOperationException("The system under test refused to start.");
+
+        public DateTimeOffset Now() => DateTimeOffset.UnixEpoch;
     }
 
     public sealed class NeedsAClock(IClock clock)

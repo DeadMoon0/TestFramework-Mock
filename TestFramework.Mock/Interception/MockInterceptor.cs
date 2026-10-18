@@ -14,8 +14,8 @@ namespace TestFramework.Mock.Interception;
 /// <summary>
 /// The engine's one interception path: record the call, refuse by name what no setup expects —
 /// and equally what more than one setup expects, because any ambiguity is a failure — then run
-/// the one answering setup. The frozen rule is the recorder's alone — a frozen instance refuses
-/// there, so this class never re-states it.
+/// the one answering setup. What happens to a call after the run finished is the recorder's alone -
+/// it is answered and not recorded - so this class never re-states it.
 /// </summary>
 internal sealed class MockInterceptor : IInterceptor
 {

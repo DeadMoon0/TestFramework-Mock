@@ -114,7 +114,7 @@ executed inside the test host process. There is no service deployment unit.
 - **Honest failures:** every refusal derives from the framework's exception types and carries recovery
   steps and, where there is a set to choose from, the available options.
 - **Early validation:** awaitable results `Host` would not await are refused when the timeline is built;
-  pack mistakes are refused when the pack is instantiated, before the system under test runs.
+  pack mistakes are refused when the pack is included, before the system under test runs.
 - **Generated arities:** one T4 template per verb family, output committed; a reflection test pins that
   every argument count up to eight exists.
 - **Family conventions:** the suite runs the shared convention checks — steps clone and freeze, one JSON

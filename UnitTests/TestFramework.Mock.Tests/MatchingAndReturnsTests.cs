@@ -116,6 +116,41 @@ public class MatchingAndReturnsTests
         Assert.Contains("interface", refusal.Message);
     }
 
+    [Fact]
+    public void AnInterfaceTheProxyGeneratorCannotSee_IsRefusedByName_WhenThePackIsIncluded()
+    {
+        // Inside the proxy library this fails with a type-load error naming none of the user's code.
+        FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(
+            () => MockEnvironment.For(_ => { }).Include<HiddenServicePack>());
+        Assert.Contains(nameof(IHiddenService), refusal.Message);
+        Assert.Contains("DynamicProxyGenAssembly2", string.Join(" ", refusal.RecoverySteps));
+    }
+
+    [Fact]
+    public void APropertyIsNotACall_AndIsRefusedWhereTheSetupIsDeclared()
+    {
+        FrameworkConfigurationException refusal = Assert.Throws<FrameworkConfigurationException>(() =>
+            new InlinePack<ICounted>(m => m.Call(s => s.Count).Returns(1)).Create());
+        Assert.Contains("single direct method call", refusal.Message);
+    }
+
+    public interface ICounted
+    {
+        int Count { get; }
+    }
+
+    internal interface IHiddenService
+    {
+        void Save();
+    }
+
+    private sealed class HiddenServicePack : MockPack<IHiddenService>
+    {
+        protected override void Configure(MockBuilder<IHiddenService> mock)
+        {
+        }
+    }
+
     private sealed class ClassServicePack : MockPack<FileStoreBase>
     {
         protected override void Configure(MockBuilder<FileStoreBase> mock)

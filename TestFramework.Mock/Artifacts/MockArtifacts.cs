@@ -24,7 +24,7 @@ public sealed class MockArtifacts
 
     /// <summary>
     /// Records what the call left behind under the artifact's identity, replacing an earlier
-    /// publish of the same identity. Refused after the run has finished.
+    /// publish of the same identity. After the run has finished it is not recorded, and the run's log says so.
     /// </summary>
     public void Publish(MockArtifact artifact)
     {

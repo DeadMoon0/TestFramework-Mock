@@ -71,7 +71,9 @@ internal static class MockHost
     /// A registered service whose own dependencies the composition lacks fails inside the container, and
     /// that is the first failure most compositions meet: a bare <c>ServiceCollection</c> has none of what the
     /// generic host adds for free. The container's own sentence names the missing piece, so it is carried in
-    /// the message word for word rather than left on an inner exception a reader may never see.
+    /// the message word for word rather than left on an inner exception a reader may never see. Only the
+    /// container's own failures are put that way: a constructor of the system under test that throws is the
+    /// system under test failing, and its exception reaches the step unchanged.
     /// </remarks>
     public static TService Resolve<TService>(IServiceProvider callScope)
         where TService : class
@@ -81,7 +83,7 @@ internal static class MockHost
         {
             service = callScope.GetService<TService>();
         }
-        catch (InvalidOperationException exception)
+        catch (InvalidOperationException exception) when (IsTheContainers(exception))
         {
             throw new FrameworkConfigurationException(
                 $"'{typeof(TService).Name}' is registered in the hosted services, but could not be built: {exception.Message}", exception)
@@ -101,6 +103,9 @@ internal static class MockHost
                 RecoverySteps = ["Register it in the composition handed to MockEnvironment.For(...)."],
             };
     }
+
+    private static bool IsTheContainers(InvalidOperationException exception)
+        => string.Equals(exception.Source, typeof(ServiceProvider).Assembly.GetName().Name, StringComparison.Ordinal);
 
     /// <summary>
     /// Declares each named argument variable as a step input, typed as the call reads it, so the planner sees

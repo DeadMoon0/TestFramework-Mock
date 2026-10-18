@@ -82,7 +82,7 @@ real dependency would leave a file or a row — and a timeline step brings that 
 logs close with it: they are a snapshot from then on, and a late call is answered but not recorded - the run's
 log says so - rather than thrown into the system under test.
 
-## Writing A pack
+## Writing A Pack
 
 A setup names one call on the service. Arguments are matched by value, or by `MockArg.Any<T>()`:
 
@@ -97,7 +97,7 @@ matches is refused naming them all. There is no precedence rule; narrow the matc
 - `MockArg.Any<T>()` matches any value of `T`, and nothing of another type: on an `object` parameter,
   `MockArg.Any<string>()` does not answer an `int`. It stands only as a whole argument — inside a larger
   expression such as `MockArg.Any<int>() + 1` it is refused, because it would be read once as a fixed value.
-- An exact value is evaluated once, when the pack is instantiated. Arrays and lists compare by their
+- An exact value is evaluated once, when the pack is instantiated for a run. Arrays and lists compare by their
   elements in order; everything else compares with `Equals`.
 - An `out` or `ref` position takes `MockArg.Ref<T>.Any` — see [Out And Ref Parameters](#out-and-ref-parameters).
 
@@ -120,7 +120,7 @@ The async verbs exist only on a setup for a task-returning method, so `ReturnsAs
 exception at the call itself, which no real async method does.
 
 Typed lambdas exist for one to eight arguments. Their parameter types are checked against the mocked
-method when the pack is instantiated, so a mistyped lambda fails there, naming the method's signature —
+method when the pack is included, so a mistyped lambda fails there, naming the method's signature —
 not at the first call.
 
 The rules a pack is held to:
@@ -162,7 +162,7 @@ mock.Call(s => s.Bump(ref MockArg.Ref<int>.Any))
   call's arguments: typed lambdas receive every other parameter. A `ref` parameter arrives as its incoming
   value; at its position the placeholder matches any value, and a variable matches the value it held when
   the pack was instantiated.
-- `Assigns` names the parameter as the method declares it, and is checked when the pack is instantiated:
+- `Assigns` names the parameter as the method declares it, and is checked when the pack is included:
   the name must be an `out` or `ref` parameter, the value must fit its type, and each is stated once.
 - Every `out` parameter must be assigned; a `ref` parameter nobody assigns keeps the caller's value.
 - The values are written when the call returns. A call that throws writes nothing back, and `Throws` with

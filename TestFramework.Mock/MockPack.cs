@@ -9,7 +9,7 @@ using TestFramework.Core.Steps;
 namespace TestFramework.Mock;
 
 /// <summary>
-/// One immutable declaration of a test double — the pack. A definition says nothing about
+/// One immutable declaration of a test double — the pack. A pack says nothing about
 /// which run it serves: it is instantiated per run, so recordings and published artifacts are
 /// run-isolated and parallel runs never share state.
 /// </summary>
