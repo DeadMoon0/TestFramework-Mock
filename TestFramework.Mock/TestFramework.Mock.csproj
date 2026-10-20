@@ -38,7 +38,7 @@
 		<PackageReference Include="Castle.Core" Version="5.2.1" />
 		<!-- The lowest version Mock needs, so the system under test's own DI version wins on every target. -->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-		<PackageReference Include="TestFramework.Core" Version="0.7.0" />
+		<PackageReference Include="TestFramework.Core" Version="0.7.1" />
 	</ItemGroup>
 
 	<ItemGroup>
